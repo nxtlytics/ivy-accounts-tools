@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
-import sys
-import json
-from botocore import session as se
 import boto3
-from botocore.exceptions import BotoCoreError
-import logging
 import click
+import json
+import logging
+import sys
 
+from botocore import session as se
+from botocore.exceptions import BotoCoreError
 
 class VPCCleaner:
     log = logging.getLogger(__name__)
@@ -256,4 +254,3 @@ def app(really_delete):
 
 if __name__ == "__main__":
     app()
-
