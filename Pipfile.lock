@@ -1,7 +1,7 @@
 {
     "_meta": {
         "hash": {
-            "sha256": "9d86b4e177740297da369550424c3b111a2df0d613321879919d5e559fd84c08"
+            "sha256": "a88eb83d43accb08223cd21483350aa9b4fb5e3e56a4cf5a7aac6d8a7be0fe8a"
         },
         "pipfile-spec": 6,
         "requires": {
@@ -23,6 +23,18 @@
             ],
             "index": "pypi",
             "version": "==1.11.7"
+        },
+        "boto3-stubs": {
+            "extras": [
+                "iam",
+                "organizations"
+            ],
+            "hashes": [
+                "sha256:b12ba0f4ec62cd5079570a86b36e97434dedd997ad1ed7c471be38c7452e7bff",
+                "sha256:e43130e2c5aaa5de1fe9d048e045e5dc1f4a18e658d7cc97e11018f0d617df72"
+            ],
+            "index": "pypi",
+            "version": "==1.14.60.0"
         },
         "botocore": {
             "hashes": [
@@ -56,6 +68,20 @@
             ],
             "index": "pypi",
             "version": "==0.9.4"
+        },
+        "mypy-boto3-iam": {
+            "hashes": [
+                "sha256:8594d2f3ad5bac4af150353f01f215c3d26a19c4e297af960f0a80c735f0993e",
+                "sha256:b000bac706d7d6f6f6d6c9359c3cd86ad51dd6215cf34d6eb0545d0edd9ab2c5"
+            ],
+            "version": "==1.14.60.0"
+        },
+        "mypy-boto3-organizations": {
+            "hashes": [
+                "sha256:3c378c435f909aa510d0d7d96ed1f78797ccc5d2f404d5504c6bb19334e3748c",
+                "sha256:a62947c05aa63d4e261fe236244c7c645f62b796b1aaa9fa23e46708592dfb14"
+            ],
+            "version": "==1.14.60.0"
         },
         "python-dateutil": {
             "hashes": [
