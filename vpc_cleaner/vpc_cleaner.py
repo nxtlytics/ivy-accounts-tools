@@ -20,12 +20,15 @@ class VPCCleaner:
 
     dry_run = False
 
-    def __init__(self, vpc_id, region=None, dry_run=False):
+    def __init__(self, vpc_id, region=None, dry_run=False, session=None):
         self.vpc_id = vpc_id
         # inherit session from caller, if not specified use default
         # (to allowing passing region without explicitly passing)
         self.region = region
-        self.session = boto3.Session(region_name=region)
+        if session is None:
+            self.session = boto3.Session(region_name=region)
+        else:
+            self.session = session
         self.ec2 = self.session.resource('ec2')
         self.vpc_resource = self.ec2.Vpc(vpc_id)
         self.dry_run = dry_run
@@ -181,9 +184,12 @@ class AccountCleaner:
     session = None
     dry_run = False
 
-    def __init__(self, dry_run=False):
+    def __init__(self, dry_run=False, session=None):
         self.dry_run = dry_run
-        self.session = boto3.Session()
+        if session is None:
+            self.session = boto3.Session()
+        else:
+            self.session = session
 
     def _get_regions(self):
         """ Build a region list """
