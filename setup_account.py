@@ -8,7 +8,6 @@ from new_sub_account.new_sub_account import AccountCreator
 from pathlib import Path
 from setup_sso.setup_sso import AccountSetup
 from typing import Optional
-from vpc_cleaner.vpc_cleaner import VPCCleaner, AccountCleaner
 
 _LOG_LEVEL_STRINGS = {
     'CRITICAL': logging.CRITICAL,
@@ -60,10 +59,6 @@ def main(
     saml_path = Path(saml_file)
     setup_sso.saml(saml_name, saml_path)
     setup_sso.create_default_roles()
-
-    # Clean vpcs in all regions
-    cleaner = AccountCleaner(dry_run=False, session=sub_account_session)
-    cleaner.clean_all_vpcs_in_all_regions()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
