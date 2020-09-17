@@ -52,7 +52,7 @@ class AccountCreator:
         paginator = self.client.get_paginator("list_accounts")
         page_iterator = paginator.paginate()
         for element in page_iterator:
-            for account in element['Accounts']:
+            for account in element.get('Accounts', []):
                 if name in account.values() or email in account.values():
                     self.log.info("An account with name %s and/or email %s already exists, its account ID is %s", name, email, account['Id'])
                     self.account_id = account['Id']
@@ -64,48 +64,49 @@ class AccountCreator:
     def _commercial(self, email: str, name: str) -> str:
         """ Create Commercial Account """
         self.log.debug("I will try to create commercial account with name %s", name)
-        response = self.client.create_account(
+        account_status = self.client.create_account(
             Email=email,
             AccountName=name
         )['CreateAccountStatus']
-        return self._get_status(response)['AccountId']
+        return self._get_status(account_status)['AccountId']
 
     def _goverment(self, email: str, name: str) -> str:
         """ Create Government Account """
-        response = self.client.create_gov_cloud_account(
+        account_status = self.client.create_gov_cloud_account(
             Email=email,
             AccountName=name
         )['CreateAccountStatus']
-        return self._get_status(response)['GovCloudAccountId']
+        return self._get_status(account_status)['GovCloudAccountId']
 
-    def _get_status(self, response: dict) -> dict:
+    def _get_status(self, account_status: dict) -> dict:
         """ Get Account Creation Status """
         self.log.info(
             "New account status is %s, Account ID is %s, if request failed the error is %s",
-            response['State'],
-            response.get('AccountId', 'not yet assigned'),
-            response.get('FailureReason', 'No Failures')
+            account_status['State'],
+            account_status.get('AccountId', 'not yet assigned'),
+            account_status.get('FailureReason', 'No Failures')
         )
-        counter: int = 1
-        account_status = self.client.describe_create_account_status(
-            CreateAccountRequestId=response['Id']
-        )['CreateAccountStatus']
-        while account_status['State'] == 'IN_PROGRESS':
-            if counter >= 5:
-                break
-            self.log.info(
-                "Account ID %s is still in the process of being creating waiting for %s seconds",
-                account_status.get('AccountId', 'not yet assigned'),
-                counter
-            )
-            sleep(counter)
-            counter += 1
-            account_status = self.client.describe_create_account_status(
-                CreateAccountRequestId=response['Id']
-            )['CreateAccountStatus']
         if account_status['State'] == 'SUCCEEDED':
             self.log.info("Account creation succeeded")
             return account_status
+        elif account_status['State'] == 'IN_PROGRESS':
+            counter: int = 1
+            account_status = self.client.describe_create_account_status(
+                CreateAccountRequestId=account_status['Id']
+            )['CreateAccountStatus']
+            while account_status['State'] == 'IN_PROGRESS':
+                if counter >= 5:
+                    break
+                self.log.info(
+                    "Account ID %s is still in the process of being creating waiting for %s seconds",
+                    account_status.get('AccountId', 'not yet assigned'),
+                    counter
+                )
+                sleep(counter)
+                counter += 1
+                account_status = self.client.describe_create_account_status(
+                    CreateAccountRequestId=account_status['Id']
+                )['CreateAccountStatus']
         elif account_status['State'] == 'FAILED':
             self.log.exception("Account creation failed")
             raise Exception

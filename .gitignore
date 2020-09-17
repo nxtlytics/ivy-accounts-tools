@@ -142,3 +142,4 @@ cython_debug/
 
 # ivy-account-tools specific
 setup_sso/*.xml
+tmp/

@@ -27,3 +27,27 @@ optional arguments:
   -l {CRITICAL,ERROR,WARNING,INFO,DEBUG}, --log-level {CRITICAL,ERROR,WARNING,INFO,DEBUG}
                         Set the logging output level
 ```
+
+### How to test
+
+```bash
+./run_tests.sh
+...
+collected 3 items
+
+tests/test_setup_account.py::test_sub_account_creation PASSED                                                                                                                                                                                                                                                                                                                                                                                                                                      [ 33%]
+tests/test_setup_account.py::test_sub_account_duplicate PASSED                                                                                                                                                                                                                                                                                                                                                                                                                                     [ 66%]
+tests/test_setup_account.py::test_account_setup PASSED
+...
+---------- coverage: platform darwin, python 3.8.4-final-0 -----------
+Name                                 Stmts   Miss  Cover
+--------------------------------------------------------
+new_sub_account/new_sub_account.py      80     29    64%
+setup_account.py                        42     42     0%
+setup_sso/setup_sso.py                  99     33    67%
+tests/test_setup_account.py             45      0   100%
+vpc_cleaner/vpc_cleaner.py             154    115    25%
+--------------------------------------------------------
+TOTAL                                  420    219    48%
+...
+```

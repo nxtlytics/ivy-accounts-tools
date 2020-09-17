@@ -26,7 +26,7 @@ class AccountSetup:
     client = None
     alias_name = None
     saml_provider = None
-    roles_arn = dict
+    roles_arn: dict = {}
     start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow","Condition":{"StringEquals":{"SAML:aud":"https://signin.aws.amazon.com/saml"}},"Principal":{"Federated":"'
     end_of_policy = '"}}]}'
 
