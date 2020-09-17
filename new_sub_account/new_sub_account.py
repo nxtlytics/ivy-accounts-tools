@@ -24,25 +24,42 @@ _LOG_LEVEL_STRINGS = {
 class AccountCreator:
     log = logging.getLogger(__name__)
     client = None
-    commercial_id = None
-    goverment_id = None
     account_id = None
+    aws_partition = None
 
-    def __init__(self, client: Optional[OrganizationsClient] = None) -> None:
+    def __init__(self, client: Optional[OrganizationsClient] = None, aws_partition: Optional[str] = None) -> None:
         if client is None:
             self.client = boto3.client('organizations')
         else:
             self.client = client
+        if aws_partition is None:
+            self.aws_partition = boto3.client('ec2').meta.partition
+        else:
+            self.aws_partition = aws_partition
 
     def create(self, email: str, name: str) -> None:
-        if self.account_id is None:
-            aws_partition = boto3.client('ec2').meta.partition
-            if aws_partition == '':
+        """ Creates Account based on partition """
+        if self._check_account(email,name):
+            if self.aws_partition == 'aws-us-gov':
                 self.account_id = self._government(email, name)
             else:
                 self.account_id = self._commercial(email, name)
         else:
-            self.log.info("Account has been created and its ID is %s", self.account_id)
+            self.log.info("No sub account will be created")
+
+    def _check_account(self, email: str, name: str) -> bool:
+        """ Check if an account with email or name already exists """
+        paginator = self.client.get_paginator("list_accounts")
+        page_iterator = paginator.paginate()
+        for element in page_iterator:
+            for account in element['Accounts']:
+                if name in account.values() or email in account.values():
+                    self.log.info("An account with name %s and/or email %s already exists, its account ID is %s", name, email, account['Id'])
+                    self.account_id = account['Id']
+                    return False
+        else:
+            self.log.info("Did not find an account with name %s nor email %s", name, email)
+            return True
 
     def _commercial(self, email: str, name: str) -> str:
         """ Create Commercial Account """
@@ -73,10 +90,12 @@ class AccountCreator:
         account_status = self.client.describe_create_account_status(
             CreateAccountRequestId=response['Id']
         )['CreateAccountStatus']
-        while account_status['State'] == 'IN_PROGRESS' or counter >= 5:
+        while account_status['State'] == 'IN_PROGRESS':
+            if counter >= 5:
+                break
             self.log.info(
                 "Account ID %s is still in the process of being creating waiting for %s seconds",
-                account_status['AccountId'],
+                account_status.get('AccountId', 'not yet assigned'),
                 counter
             )
             sleep(counter)
@@ -100,22 +119,11 @@ def main(
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[log_level])
     account = AccountCreator()
-    account.commercial(email, sub_account_name)
-    sub_account_role_arn = f"arn:aws:iam::{account.commercial_id}:role/OrganizationAccountAccessRole"
-    assume_role = boto3.client('sts').assume_role(
-        RoleArn=sub_account_role_arn,
-        RoleSessionName='IvyAccountTools'
-    )
-    sub_account_session = Session(
-        aws_access_key_id=assume_role['Credentials']['AccessKeyId'],
-        aws_secret_access_key=assume_role['Credentials']['SecretAccessKey'],
-        aws_session_token=assume_role['Credentials']['SessionToken']
-    )
-    sub_account_iam = sub_account_session.client('iam')
+    account.create(email, sub_account_name)
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
-        description="Creates new commercial sub-account, and optionally its GovCloud account"
+        description="Creates new AWS sub-account"
     )
     parser.add_argument(
         "-a", "--sub-account-name",

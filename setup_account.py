@@ -17,7 +17,7 @@ _LOG_LEVEL_STRINGS = {
 }
 
 def main(
-        sub_account_name: str,
+        account_name: str,
         ivy_tag: str,
         saml_provider: str,
         saml_file: str,
@@ -29,11 +29,12 @@ def main(
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[log_level])
 
-    aws_partition = setup_sso.saml_provider.split(':')[1]
+    aws_partition = boto3.client('ec2').meta.partition
     if email:
+        log.info("I will try to create sub-account %s", account_name)
         # Create sub account
         account = AccountCreator(aws_partition=aws_partition)
-        account.create(email, sub_account_name)
+        account.create(email, account_name)
         sub_account_role_arn = f"arn:{aws_partition}:iam::{account.account_id}:role/OrganizationAccountAccessRole"
         assume_role = boto3.client('sts').assume_role(
             RoleArn=sub_account_role_arn,
@@ -46,20 +47,22 @@ def main(
         )
         sub_account_iam = sub_account_session.client('iam')
     else:
+        log.info("No E-Mail was provided so I will not create a sub-account")
         sub_account_session = None
         sub_account_iam = None
 
-    # Clean vpcs in all regions
-    cleaner = AccountCleaner(dry_run=False, session=sub_account_session)
-    cleaner.clean_all_vpcs_in_all_regions()
-
     # Setup AWS alias and roles
+    log.info()
     setup_sso = AccountSetup(client=sub_account_iam)
-    setup_sso.alias(sub_account_name)
+    setup_sso.alias(account_name)
     saml_name = ivy_tag + '-' + saml_provider
     saml_file = Path(saml_file)
     setup_sso.saml(saml_name, saml_file)
     setup_sso.create_default_roles()
+
+    # Clean vpcs in all regions
+    cleaner = AccountCleaner(dry_run=False, session=sub_account_session)
+    cleaner.clean_all_vpcs_in_all_regions()
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -72,10 +75,10 @@ if __name__ == "__main__":
         """
     )
     parser.add_argument(
-        "-a", "--sub-account-name",
+        "-a", "--account-name",
         type=str,
         required=True,
-        help="AWS Sub Account Name"
+        help="AWS Account Name and alias"
     )
     parser.add_argument(
         "-f", "--saml-metadata-document-file",
@@ -113,7 +116,7 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(
-        args.sub_account_name,
+        args.account_name,
         args.ivy_tag,
         args.saml_provider,
         args.saml_file,
