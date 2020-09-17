@@ -27,11 +27,11 @@ class VPCCleaner:
         # (to allowing passing region without explicitly passing)
         self.region = region
         if session is None:
-            self.session = boto3.Session(region_name=region)
+            self.session = boto3.Session()
         else:
             self.session = session
         self.endpoint_url = endpoint_url
-        self.ec2 = self.session.resource('ec2', endpoint_url=self.endpoint_url)
+        self.ec2 = self.session.resource('ec2', region_name=region, endpoint_url=self.endpoint_url)
         self.vpc_resource = self.ec2.Vpc(vpc_id)
         self.dry_run = dry_run
 
@@ -232,7 +232,7 @@ class AccountCleaner:
     def clean_vpc_in_region(self, vpc_id, region):
         self.log.info("Cleaning VPC [%s] in region [%s]", vpc_id, region)
 
-        vpc_cleaner = VPCCleaner(vpc_id=vpc_id, region=region, dry_run=self.dry_run, endpoint_url=self.endpoint_url)
+        vpc_cleaner = VPCCleaner(vpc_id=vpc_id, region=region, dry_run=self.dry_run, session=self.session, endpoint_url=self.endpoint_url)
         vpc_cleaner.clean_all()
 
     def clean_all_vpcs_in_region(self, region):

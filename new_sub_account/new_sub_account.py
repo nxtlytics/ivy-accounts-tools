@@ -107,6 +107,7 @@ class AccountCreator:
                 account_status = self.client.describe_create_account_status(
                     CreateAccountRequestId=account_status['Id']
                 )['CreateAccountStatus']
+            return account_status
         elif account_status['State'] == 'FAILED':
             self.log.exception("Account creation failed")
             raise Exception
