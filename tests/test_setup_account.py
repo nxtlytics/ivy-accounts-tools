@@ -63,7 +63,11 @@ def test_account_setup() -> None:
     assert 'SSOViewOnlyAccess' in setup_sso.roles_arn.keys()
 
 def test_account_alias_duplicate() -> None:
-    # Setup AWS alias and roles
+    """
+    Try to setup an alias with the same name
+    it should fine the previous one and not create it
+    aliases should be equal to 1
+    """
     setup_sso = AccountSetup(client=iam_client)
     setup_sso.alias(account_name)
     aliases = boto3.client('iam', endpoint_url=endpoint_url).list_account_aliases()['AccountAliases']
