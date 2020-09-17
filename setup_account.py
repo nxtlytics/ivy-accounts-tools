@@ -3,7 +3,9 @@ import argparse
 import boto3
 import logging
 
+from boto3.session import Session
 from new_sub_account.new_sub_account import AccountCreator
+from pathlib import Path
 from setup_sso.setup_sso import AccountSetup
 from typing import Optional
 from vpc_cleaner.vpc_cleaner import VPCCleaner, AccountCleaner

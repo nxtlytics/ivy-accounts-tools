@@ -62,6 +62,15 @@ def test_account_setup() -> None:
     assert 'SSOAdministratorAccess' in setup_sso.roles_arn.keys()
     assert 'SSOViewOnlyAccess' in setup_sso.roles_arn.keys()
 
+def test_account_alias_duplicate() -> None:
+    # Setup AWS alias and roles
+    sub_account_iam = boto3.client('iam', endpoint_url=endpoint_url)
+    setup_sso = AccountSetup(client=sub_account_iam)
+    setup_sso.alias(account_name)
+    aliases = boto3.client('iam', endpoint_url=endpoint_url).list_account_aliases()['AccountAliases']
+    assert len(aliases) == 1
+
+
 #def test_vpc_cleaner() -> None:
 #    # Clean vpcs in all regions
 #    cleaner = AccountCleaner(dry_run=False, session=sub_account_session, endpoint_url=endpoint_url)

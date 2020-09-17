@@ -38,7 +38,7 @@ class AccountSetup:
 
     def alias(self, account_alias: str) -> None:
         """ Setup Account Alias """
-        if self.alias_name is None:
+        if self._check_alias(account_alias):
             self.log.debug("I will try to setup account_alias: %s", account_alias)
             try:
                 alias = self.client.create_account_alias(
@@ -50,6 +50,20 @@ class AccountSetup:
                 self.log.exception("Account alias was not setup with error %s", e)
         else:
             self.log.info("Account alias has already been setup and is %s", self.alias_name)
+
+    def _check_alias(self, account_alias: str) -> bool:
+        """ Check if an account alias has been set already """
+        paginator = self.client.get_paginator("list_account_aliases")
+        page_iterator = paginator.paginate()
+        for element in page_iterator:
+            for aliases in element.get('AccountAliases', []):
+                if account_alias in aliases:
+                    self.log.info("An account alias %s already exists", account_alias)
+                    self.alias_name = account_alias
+                    return False
+        else:
+            self.log.info("Did not find an account alias with name %s", account_alias)
+            return True
 
     def saml(self, name: str, saml_file: Path) -> None:
         """ Setup SAML Provider """
@@ -131,8 +145,8 @@ def main(
     setup_sso = AccountSetup()
     setup_sso.alias(sub_account_name)
     saml_name = ivy_tag + '-' + saml_provider
-    saml_file = Path(saml_file)
-    setup_sso.saml(saml_name, saml_file)
+    saml_path = Path(saml_file)
+    setup_sso.saml(saml_name, saml_path)
     setup_sso.create_default_roles()
 
 if __name__ == "__main__":
