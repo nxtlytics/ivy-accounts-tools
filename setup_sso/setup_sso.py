@@ -110,7 +110,7 @@ class AccountSetup:
             policy_document = self.start_of_policy + self.saml_provider + self.end_of_policy
         if self.roles_arn.get(role_name) is None:
             try:
-                self.log.debug("I will try to create role with name %s for account ID %s", role_name, self.saml_provider.split(':')[4])
+                self.log.info("I will try to create role with name %s for account ID %s", role_name, self.saml_provider.split(':')[4])
                 role = self._create_role(role_name, policy_document)
                 self._attach_role_policy(role_name, policy_arn)
                 self.roles_arn[role_name] = role['Arn']
