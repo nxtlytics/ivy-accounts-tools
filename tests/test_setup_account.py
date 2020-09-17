@@ -26,6 +26,7 @@ saml_doc = './tests/test_saml.xml'
 email = 'infeng+' + account_name + 'example.com'
 aws_partition = boto3.client('ec2', endpoint_url=endpoint_url).meta.partition
 orgs_client = boto3.client('organizations', endpoint_url=endpoint_url)
+iam_client = boto3.client('iam', endpoint_url=endpoint_url)
 # create an organization so accounts can be created under it
 orgs_client.create_organization(FeatureSet='ALL')
 
@@ -43,15 +44,14 @@ def test_sub_account_duplicate() -> None:
     """
     account = AccountCreator(client=orgs_client, aws_partition=aws_partition)
     account.create(email, account_name)
-    accounts = boto3.client('organizations', endpoint_url=endpoint_url).list_accounts()['Accounts']
+    accounts = orgs_client.list_accounts()['Accounts']
     assert type(account.account_id) is str
     # should be 2 because we create an organization above which creates a master account
     assert len(accounts) == 2
 
 def test_account_setup() -> None:
     # Setup AWS alias and roles
-    sub_account_iam = boto3.client('iam', endpoint_url=endpoint_url)
-    setup_sso = AccountSetup(client=sub_account_iam)
+    setup_sso = AccountSetup(client=iam_client)
     setup_sso.alias(account_name)
     saml_name = ivy_tag + '-' + saml_provider
     saml_file = Path(saml_doc)
@@ -64,14 +64,43 @@ def test_account_setup() -> None:
 
 def test_account_alias_duplicate() -> None:
     # Setup AWS alias and roles
-    sub_account_iam = boto3.client('iam', endpoint_url=endpoint_url)
-    setup_sso = AccountSetup(client=sub_account_iam)
+    setup_sso = AccountSetup(client=iam_client)
     setup_sso.alias(account_name)
     aliases = boto3.client('iam', endpoint_url=endpoint_url).list_account_aliases()['AccountAliases']
     assert len(aliases) == 1
 
 
-#def test_vpc_cleaner() -> None:
-#    # Clean vpcs in all regions
-#    cleaner = AccountCleaner(dry_run=False, session=sub_account_session, endpoint_url=endpoint_url)
-#    cleaner.clean_all_vpcs_in_all_regions()
+def test_vpc_cleaner() -> None:
+    # Clean vpcs in all regions
+    ec2_client = boto3.client('ec2', endpoint_url=endpoint_url)
+    all_regions = [ element['RegionName'] for element in ec2_client.describe_regions()['Regions'] ]
+    vpc_list_before = []
+    for region in all_regions:
+        vpcs = [ element['VpcId'] for element in boto3.client('ec2', region_name=region, endpoint_url=endpoint_url).describe_vpcs(
+            Filters=[
+                {
+                    'Name' : 'isDefault',
+                    'Values' : [
+                        'true',
+                    ],
+                },
+            ]
+        )['Vpcs'] ]
+        vpc_list_before.extend(vpcs)
+    assert len(vpc_list_before) == 24
+    cleaner = AccountCleaner(dry_run=False, endpoint_url=endpoint_url)
+    cleaner.clean_all_vpcs_in_all_regions()
+    vpc_list_after = []
+    for region in all_regions:
+        vpcs = [ element['VpcId'] for element in boto3.client('ec2', region_name=region, endpoint_url=endpoint_url).describe_vpcs(
+            Filters=[
+                {
+                    'Name' : 'isDefault',
+                    'Values' : [
+                        'true',
+                    ],
+                },
+            ]
+        )['Vpcs'] ]
+        vpc_list_after.extend(vpcs)
+    assert len(vpc_list_after) == 0
