@@ -27,7 +27,12 @@ class AccountSetup:
     alias_name = None
     saml_provider = None
     roles_arn: dict = {}
-    start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow","Condition":{"StringEquals":{"SAML:aud":"https://signin.aws.amazon.com/saml"}},"Principal":{"Federated":"'
+    saml_audiences: dict = {
+        'aws': 'https://signin.aws.amazon.com/saml',
+        'aws-us-gov': 'https://signin.amazonaws-us-gov.com/saml'
+    }
+    start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow","Condition":{"StringEquals":{"SAML:aud":"'
+    middle_of_policy = '"}},"Principal":{"Federated":"'
     end_of_policy = '"}}]}'
 
     def __init__(self, client: Optional[IAMClient] = None) -> None:
@@ -104,10 +109,8 @@ class AccountSetup:
         except Exception as e:
             self.log.exception("Policy %s failed to attach to role %s with error %s", policy_arn, role_name, e)
 
-    def create_role(self, role_name: str, policy_arn: str, policy_document: Optional[str] = None) -> None:
+    def create_role(self, role_name: str, policy_arn: str, policy_document: str) -> None:
         """ Create Role and attach a Policy to it """
-        if policy_document is None:
-            policy_document = self.start_of_policy + self.saml_provider + self.end_of_policy
         if self.roles_arn.get(role_name) is None:
             try:
                 self.log.info("I will try to create role with name %s for account ID %s", role_name, self.saml_provider.split(':')[4])
@@ -123,12 +126,13 @@ class AccountSetup:
         """ Create Default Roles """
         try:
             aws_partition = self.saml_provider.split(':')[1]
+            policy_document = self.start_of_policy + self.saml_audiences[aws_partition] + self.middle_of_policy + self.saml_provider + self.end_of_policy
             admin_role_name = 'SSOAdministratorAccess'
             admin_policy_arn = f"arn:{aws_partition}:iam::aws:policy/AdministratorAccess"
-            self.create_role(role_name=admin_role_name, policy_arn=admin_policy_arn, policy_document=None)
+            self.create_role(role_name=admin_role_name, policy_arn=admin_policy_arn, policy_document=policy_document)
             read_role_name = 'SSOViewOnlyAccess'
             read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/job-function/ViewOnlyAccess"
-            self.create_role(role_name=read_role_name, policy_arn=read_policy_arn, policy_document=None)
+            self.create_role(role_name=read_role_name, policy_arn=read_policy_arn, policy_document=policy_document)
         except Exception as e:
             self.log.exception("Creation of default roles failed with error %s", e)
 

@@ -35,19 +35,22 @@ optional arguments:
 ...
 collected 3 items
 
-tests/test_setup_account.py::test_sub_account_creation PASSED                                                                                                                                                                                                                                                                                                                                                                                                                                      [ 33%]
-tests/test_setup_account.py::test_sub_account_duplicate PASSED                                                                                                                                                                                                                                                                                                                                                                                                                                     [ 66%]
+tests/test_setup_account.py::test_sub_account_creation PASSED
+tests/test_setup_account.py::test_sub_account_duplicate PASSED
 tests/test_setup_account.py::test_account_setup PASSED
+tests/test_setup_account.py::test_account_alias_duplicate PASSED
+tests/test_setup_account.py::test_vpc_cleaner PASSED
 ...
 ---------- coverage: platform darwin, python 3.8.4-final-0 -----------
 Name                                 Stmts   Miss  Cover
 --------------------------------------------------------
-new_sub_account/new_sub_account.py      80     29    64%
-setup_account.py                        42     42     0%
-setup_sso/setup_sso.py                  99     33    67%
-tests/test_setup_account.py             45      0   100%
-vpc_cleaner/vpc_cleaner.py             154    115    25%
+new_sub_account/new_sub_account.py      81     30    63%
+setup_account.py                        44     44     0%
+setup_sso/setup_sso.py                 110     32    71%
+tests/test_setup_account.py             65      0   100%
+vpc_cleaner/vpc_cleaner.py             154     35    77%
 --------------------------------------------------------
-TOTAL                                  420    219    48%
+TOTAL                                  454    141    69%
+
 ...
 ```
