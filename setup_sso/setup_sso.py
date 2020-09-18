@@ -29,6 +29,7 @@ class AccountSetup:
     roles_arn: dict = {}
     saml_audiences: dict = {
         'aws': 'https://signin.aws.amazon.com/saml',
+        'aws-cn': 'https://signin.amazonaws.cn/saml',
         'aws-us-gov': 'https://signin.amazonaws-us-gov.com/saml'
     }
     start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow","Condition":{"StringEquals":{"SAML:aud":"'
