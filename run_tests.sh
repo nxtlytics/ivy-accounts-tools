@@ -20,6 +20,8 @@ case "${UNAME_OUTPUT}" in
       IF_SUDO='';;
 esac
 
+export IF_SUDO
+
 function kill_localstack() {
   ${IF_SUDO} docker kill lstack
 }
@@ -30,7 +32,7 @@ function start_localstack() {
   cd tests/localstack
   ${IF_SUDO} docker run -d --rm --name lstack -v ${PWD}/initaws.d:/docker-entrypoint-initaws.d -p 4566:4566 localstack/localstack:0.11.5
   cd -
-  bash -c 'sudo docker logs -f lstack 2>&1 | { sed "/^RUN TESTS NOW$/ q" && kill -9 $$ ;}' || true
+  bash -c '${IF_SUDO} docker logs -f lstack 2>&1 | { sed "/^RUN TESTS NOW$/ q" && kill -9 $$ ;}' || true
 }
 
 pipenv sync --dev
