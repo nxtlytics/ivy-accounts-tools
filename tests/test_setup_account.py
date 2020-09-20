@@ -18,6 +18,7 @@ log.setLevel(logging.INFO)
 
 os.environ['AWS_ACCESS_KEY_ID'] = 'local'
 os.environ['AWS_SECRET_ACCESS_KEY'] = 'stack'
+os.environ['AWS_DEFAULT_REGION'] = 'us-west-2'
 endpoint_url = 'http://localhost:4566'
 account_name = 'ivy-test-sub-account'
 ivy_tag = 'ivy'
