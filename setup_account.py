@@ -7,6 +7,7 @@ from boto3.session import Session
 from new_sub_account.new_sub_account import AccountCreator
 from pathlib import Path
 from setup_sso.setup_sso import AccountSetup
+from time import sleep
 from typing import Optional
 from vpc_cleaner.vpc_cleaner import VPCCleaner, AccountCleaner
 
@@ -38,6 +39,9 @@ def main(
         account = AccountCreator(aws_partition=aws_partition)
         account.create(email, account_name)
         sub_account_role_arn = f"arn:{aws_partition}:iam::{account.account_id}:role/OrganizationAccountAccessRole"
+        sleep_time: int = 5
+        log.info(f"Waiting {sleep_time} seconds after account was created before assuming sub account role")
+        sleep(sleep_time)
         assume_role = boto3.client('sts').assume_role(
             RoleArn=sub_account_role_arn,
             RoleSessionName='IvyAccountTools'
