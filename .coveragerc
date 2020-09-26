@@ -1,0 +1,4 @@
+[run]
+omit =
+    setup_account.py
+    tests/test_setup_account.py
