@@ -1,14 +1,12 @@
 #!/usr/bin/env python
-from __future__ import print_function
-
-import sys
-import json
-from botocore import session as se
 import boto3
-from botocore.exceptions import BotoCoreError
-import logging
 import click
+import json
+import logging
+import sys
 
+from botocore import session as se
+from botocore.exceptions import BotoCoreError
 
 class VPCCleaner:
     log = logging.getLogger(__name__)
@@ -16,19 +14,24 @@ class VPCCleaner:
     vpc_id = None
 
     session = None
+    endpoint_url = None
     vpc_resource = None
     ec2 = None
     region = None
 
     dry_run = False
 
-    def __init__(self, vpc_id, region=None, dry_run=False):
+    def __init__(self, vpc_id, region=None, dry_run=False, session=None, endpoint_url=None):
         self.vpc_id = vpc_id
         # inherit session from caller, if not specified use default
         # (to allowing passing region without explicitly passing)
         self.region = region
-        self.session = boto3.Session(region_name=region)
-        self.ec2 = self.session.resource('ec2')
+        if session is None:
+            self.session = boto3.Session()
+        else:
+            self.session = session
+        self.endpoint_url = endpoint_url
+        self.ec2 = self.session.resource('ec2', region_name=region, endpoint_url=self.endpoint_url)
         self.vpc_resource = self.ec2.Vpc(vpc_id)
         self.dry_run = dry_run
 
@@ -181,16 +184,21 @@ class AccountCleaner:
     log = logging.getLogger(__name__)
 
     session = None
+    endpoint_url = None
     dry_run = False
 
-    def __init__(self, dry_run=False):
+    def __init__(self, dry_run=False, session=None, endpoint_url=None):
         self.dry_run = dry_run
-        self.session = boto3.Session()
+        self.endpoint_url = endpoint_url
+        if session is None:
+            self.session = boto3.Session()
+        else:
+            self.session = session
 
     def _get_regions(self):
         """ Build a region list """
         reg_list = []
-        regions = self.session.client('ec2').describe_regions()
+        regions = self.session.client('ec2', endpoint_url=self.endpoint_url).describe_regions()
         data_str = json.dumps(regions)
         resp = json.loads(data_str)
         region_str = json.dumps(resp['Regions'])
@@ -201,7 +209,7 @@ class AccountCleaner:
 
     def _get_default_vpcs(self, region):
         vpc_list = []
-        vpcs = self.session.client('ec2', region_name=region).describe_vpcs(
+        vpcs = self.session.client('ec2', region_name=region, endpoint_url=self.endpoint_url).describe_vpcs(
             Filters=[
                 {
                     'Name' : 'isDefault',
@@ -224,7 +232,7 @@ class AccountCleaner:
     def clean_vpc_in_region(self, vpc_id, region):
         self.log.info("Cleaning VPC [%s] in region [%s]", vpc_id, region)
 
-        vpc_cleaner = VPCCleaner(vpc_id=vpc_id, region=region, dry_run=self.dry_run)
+        vpc_cleaner = VPCCleaner(vpc_id=vpc_id, region=region, dry_run=self.dry_run, session=self.session, endpoint_url=self.endpoint_url)
         vpc_cleaner.clean_all()
 
     def clean_all_vpcs_in_region(self, region):
@@ -256,4 +264,3 @@ def app(really_delete):
 
 if __name__ == "__main__":
     app()
-
