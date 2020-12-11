@@ -1,7 +1,6 @@
 #!/usr/bin/env python
 import boto3
 import logging
-import os
 
 from pathlib import Path
 
@@ -15,9 +14,6 @@ logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s
 log = logging.getLogger()  # Gets the root logger
 log.setLevel(logging.INFO)
 
-os.environ['AWS_ACCESS_KEY_ID'] = 'local'
-os.environ['AWS_SECRET_ACCESS_KEY'] = 'stack'
-os.environ['AWS_DEFAULT_REGION'] = 'us-west-2'
 endpoint_url = 'http://localhost:4566'
 account_name = 'ivy-test-sub-account'
 ivy_tag = 'ivy'
@@ -26,16 +22,18 @@ saml_doc = './tests/test_saml.xml'
 email = 'infeng+' + account_name + 'example.com'
 phase = 'test'
 purpose = 'sandbox'
-s3_regions = ['us-east-1', 'us-east-2']
 commercial_region = 'us-west-2'
-gov_region = 'us-gov-west-1'
-commercial_session = boto3.session.Session(region_name=commercial_region)
-gov_session = boto3.session.Session(region_name=gov_region)
-commercial_orgs_client = commercial_session.client('organizations', endpoint_url=endpoint_url)
+s3_regions = ['us-east-1', 'us-east-2']
+commercial_session = boto3.session.Session(
+    region_name=commercial_region,
+    aws_access_key_id='local',
+    aws_secret_access_key='stack'
+)
+commercial_ec2_client = commercial_session.client('ec2', endpoint_url=endpoint_url)
 commercial_iam_client = commercial_session.client('iam', endpoint_url=endpoint_url)
-gov_iam_client = gov_session.client('iam', endpoint_url=endpoint_url)
 commercial_s3_client = commercial_session.client('s3', endpoint_url=endpoint_url)
 # create an organization so accounts can be created under it
+commercial_orgs_client = commercial_session.client('organizations', endpoint_url=endpoint_url)
 commercial_orgs_client.create_organization(FeatureSet='ALL')
 
 
@@ -72,7 +70,7 @@ def test_sub_account_duplicate() -> None:
 
 def test_account_setup() -> None:
     # Setup AWS alias and roles
-    setup_sso = AccountSetup(client=commercial_iam_client)
+    setup_sso = AccountSetup(session=commercial_session, endpoint_url=endpoint_url)
     setup_sso.alias(account_name)
     saml_name = ivy_tag + '-' + saml_provider
     saml_file = Path(saml_doc)
@@ -89,20 +87,23 @@ def test_account_alias_duplicate() -> None:
     it should fine the previous one and not create it
     aliases should be equal to 1
     """
-    setup_sso = AccountSetup(client=commercial_iam_client)
+    setup_sso = AccountSetup(session=commercial_session, endpoint_url=endpoint_url)
     setup_sso.alias(account_name)
-    aliases = boto3.client('iam', endpoint_url=endpoint_url).list_account_aliases()['AccountAliases']
+    aliases = commercial_iam_client.list_account_aliases()['AccountAliases']
     assert len(aliases) == 1
 
 
 def test_vpc_cleaner() -> None:
     # Clean vpcs in all regions
-    ec2_client = boto3.client('ec2', endpoint_url=endpoint_url)
-    all_regions = [element['RegionName'] for element in ec2_client.describe_regions()['Regions']]
+    all_regions = [
+        element['RegionName']
+        for element in commercial_ec2_client.describe_regions()['Regions']
+    ]
     vpc_list_before = []
     for region in all_regions:
-        vpcs = [element['VpcId'] for element in
-                boto3.client('ec2', region_name=region, endpoint_url=endpoint_url).describe_vpcs(
+        vpcs = [
+            element['VpcId'] for element in
+                commercial_session.client('ec2', region_name=region, endpoint_url=endpoint_url).describe_vpcs(
                     Filters=[
                         {
                             'Name': 'isDefault',
@@ -111,15 +112,17 @@ def test_vpc_cleaner() -> None:
                             ],
                         },
                     ]
-                )['Vpcs']]
+                )['Vpcs']
+        ]
         vpc_list_before.extend(vpcs)
     assert len(vpc_list_before) == 24
-    cleaner = AccountCleaner(dry_run=False, endpoint_url=endpoint_url)
+    cleaner = AccountCleaner(dry_run=False, session=commercial_session, endpoint_url=endpoint_url)
     cleaner.clean_all_vpcs_in_all_regions()
     vpc_list_after = []
     for region in all_regions:
-        vpcs = [element['VpcId'] for element in
-                boto3.client('ec2', region_name=region, endpoint_url=endpoint_url).describe_vpcs(
+        vpcs = [
+            element['VpcId'] for element in
+                commercial_session.client('ec2', region_name=region, endpoint_url=endpoint_url).describe_vpcs(
                     Filters=[
                         {
                             'Name': 'isDefault',
@@ -128,7 +131,8 @@ def test_vpc_cleaner() -> None:
                             ],
                         },
                     ]
-                )['Vpcs']]
+                )['Vpcs']
+        ]
         vpc_list_after.extend(vpcs)
     assert len(vpc_list_after) == 0
 
@@ -169,7 +173,7 @@ def test_infra_buckets_creator_on_default_region() -> None:
         for bucket in commercial_s3_client.list_buckets().get("Buckets", [])
     ]
     tags = {
-        f"{ivy_tag}:sysenv": f"{ivy_tag}-aws-{os.environ['AWS_DEFAULT_REGION']}-{purpose}-{phase}",
+        f"{ivy_tag}:sysenv": f"{ivy_tag}-aws-{commercial_region}-{purpose}-{phase}",
         f"{ivy_tag}:service": "s3",
         f"{ivy_tag}:role": "bucket",
         f"{ivy_tag}:group": "main",
@@ -181,6 +185,7 @@ def test_infra_buckets_creator_on_default_region() -> None:
         phase=phase,
         purpose=purpose,
         ivy_tag=ivy_tag,
+        session=commercial_session,
         endpoint_url=endpoint_url
     )
     created_buckets = infra_buckets.create_buckets()
@@ -205,7 +210,7 @@ def test_infra_buckets_creator_on_default_region() -> None:
 
 
 def test_infra_buckets_creator_duplicate() -> None:
-    # Try to create duplicate s3 infra bucketon default region and account name
+    # Try to create duplicate s3 infra bucket on default region and account name
     buckets_before = [
         bucket["Name"]
         for bucket in commercial_s3_client.list_buckets().get("Buckets", [])
@@ -214,6 +219,7 @@ def test_infra_buckets_creator_duplicate() -> None:
         phase=phase,
         purpose=purpose,
         ivy_tag=ivy_tag,
+        session=commercial_session,
         endpoint_url=endpoint_url
     )
     created_buckets = infra_buckets.create_buckets()
@@ -233,6 +239,7 @@ def test_infra_buckets_creator_on_regions() -> None:
         purpose=purpose,
         ivy_tag=ivy_tag,
         regions=s3_regions,
+        session=commercial_session,
         endpoint_url=endpoint_url
     )
     created_buckets = infra_buckets.create_buckets()

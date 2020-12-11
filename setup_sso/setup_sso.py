@@ -1,16 +1,10 @@
 #!/usr/bin/env python
 import argparse
 import boto3
-import json
 import logging
-import sys
-import botocore.client
 
-from botocore import session as se
-from botocore.exceptions import BotoCoreError
 from mypy_boto3_iam.client import IAMClient
 from pathlib import Path
-from time import sleep
 from typing import Optional
 
 _LOG_LEVEL_STRINGS = {
@@ -23,7 +17,6 @@ _LOG_LEVEL_STRINGS = {
 
 class AccountSetup:
     log = logging.getLogger(__name__)
-    client = None
     alias_name = None
     saml_provider = None
     roles_arn: dict = {}
@@ -36,11 +29,17 @@ class AccountSetup:
     middle_of_policy = '"}},"Principal":{"Federated":"'
     end_of_policy = '"}}]}'
 
-    def __init__(self, client: Optional[IAMClient] = None) -> None:
-        if client is None:
-            self.client = boto3.client('iam')
+    def __init__(
+            self,
+            session: Optional[boto3.session.Session] = None,
+            endpoint_url: Optional[str] = None
+    ) -> None:
+        if session is None:
+            self.session = boto3.session.Session()
         else:
-            self.client = client
+            self.session = session
+        self.endpoint_url = endpoint_url
+        self.client = self.session.client('iam', endpoint_url=self.endpoint_url)
 
     def alias(self, account_alias: str) -> None:
         """ Setup Account Alias """

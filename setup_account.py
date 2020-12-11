@@ -37,14 +37,13 @@ def main(
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[log_level])
 
-    aws_partition = boto3.client('ec2').meta.partition
     if email:
         log.info("I will try to create sub-account %s", account_name)
         # Create sub account
-        account = AccountCreator(aws_partition=aws_partition)
+        account = AccountCreator()
         account.create(email, account_name)
-        sub_account_role_arn = f"arn:{aws_partition}:iam::{account.account_id}:role/OrganizationAccountAccessRole"
-        sleep_time: int = 5
+        sub_account_role_arn = f"arn:aws:iam::{account.account_id}:role/OrganizationAccountAccessRole"
+        sleep_time: int = 10
         log.info(f"Waiting {sleep_time} seconds after account was created before assuming sub account role")
         sleep(sleep_time)
         assume_role = boto3.client('sts').assume_role(
@@ -56,14 +55,13 @@ def main(
             aws_secret_access_key=assume_role['Credentials']['SecretAccessKey'],
             aws_session_token=assume_role['Credentials']['SessionToken']
         )
-        sub_account_iam = sub_account_session.client('iam')
     else:
         log.info("No E-Mail was provided so I will not create a sub-account")
         sub_account_session = None
         sub_account_iam = None
 
     # Setup AWS alias and roles
-    setup_sso = AccountSetup(client=sub_account_iam)
+    setup_sso = AccountSetup(session=sub_account_session)
     setup_sso.alias(account_name)
     saml_name = ivy_tag + '-' + saml_provider
     saml_path = Path(saml_file)
