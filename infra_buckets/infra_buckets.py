@@ -4,6 +4,7 @@ import boto3
 import logging
 import re
 import sys
+import urllib.parse
 
 from typing import Optional, List
 
@@ -94,28 +95,25 @@ class InfraBuckets:
             bucket_name: str,
             region: str
     ) -> None:
+        if self.endpoint_url:
+            regional_endpoint_url = self.endpoint_url
+        else:
+            meta_endpoint = self.session.client(
+                "s3",
+                region_name=region,
+                endpoint_url=self.endpoint_url
+            ).meta.endpoint_url
+            regional_endpoint_url = urllib.parse.urlparse(meta_endpoint).hostname
         try:
-            if region == 'us-east-1':
-                self.session.client(
-                    "s3",
-                    region_name=region,
-                    endpoint_url=self.endpoint_url
-                ).create_bucket(
-                    ACL='private',
-                    Bucket=bucket_name
-                )
-            else:
-                self.session.client(
-                    "s3",
-                    region_name=region,
-                    endpoint_url=self.endpoint_url
-                ).create_bucket(
-                    ACL='private',
-                    Bucket=bucket_name,
-                    CreateBucketConfiguration={
-                        'LocationConstraint': region
-                    }
-                )
+            self.session.client(
+                "s3",
+                region_name=region,
+                endpoint_url=regional_endpoint_url
+            ).create_bucket(
+                ACL='private',
+                Bucket=bucket_name,
+                CreateBucketConfiguration={} if region == 'us-east-1' else {'LocationConstraint': region}
+            )
             self.log.info("Bucket %s creation succeeded", bucket_name)
         except Exception as e:
             self.log.error("Bucket %s creation failed with error: %s", bucket_name, e)
