@@ -2,15 +2,13 @@
 import boto3
 import logging
 import os
-import pytest
 
 from pathlib import Path
-from typing import Optional
 
 from new_sub_account.new_sub_account import AccountCreator
 from setup_sso.setup_sso import AccountSetup
-from vpc_cleaner.vpc_cleaner import VPCCleaner, AccountCleaner
-from infra_buckets.infra_buckets import InfraBuckets
+from vpc_cleaner.vpc_cleaner import AccountCleaner
+from infra_buckets.infra_buckets import infra_buckets_parser, InfraBuckets
 
 # Setup logging facility
 logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
@@ -121,6 +119,36 @@ def test_vpc_cleaner() -> None:
         vpc_list_after.extend(vpcs)
     assert len(vpc_list_after) == 0
 
+
+def test_infra_buckets_argparser() -> None:
+    arguments = [
+        '-c', phase,
+        '-p', purpose,
+        '-t', ivy_tag
+    ]
+    parsed_args = infra_buckets_parser(arguments)
+    assert parsed_args.phase == phase
+    assert parsed_args.purpose == purpose
+    assert parsed_args.ivy_tag == ivy_tag
+    assert parsed_args.regions is None
+    assert parsed_args.log_level == 'INFO'
+
+
+def test_infra_buckets_argparser_with_regions() -> None:
+    arguments = [
+        '-c', phase,
+        '-p', purpose,
+        '-t', ivy_tag,
+        '-r', ','.join(s3_regions)
+    ]
+    parsed_args = infra_buckets_parser(arguments)
+    assert parsed_args.phase == phase
+    assert parsed_args.purpose == purpose
+    assert parsed_args.ivy_tag == ivy_tag
+    assert parsed_args.regions == s3_regions
+    assert parsed_args.log_level == 'INFO'
+
+
 def test_infra_buckets_creator_on_default_region() -> None:
     # Create s3 infra bucket on default region and account name
     buckets_before = [
@@ -157,6 +185,7 @@ def test_infra_buckets_creator_on_default_region() -> None:
             )["PublicAccessBlockConfiguration"].values())
     assert created_tags == tags
 
+
 def test_infra_buckets_creator_duplicate() -> None:
     # Try to create duplicate s3 infra bucketon default region and account name
     buckets_before = [
@@ -173,6 +202,7 @@ def test_infra_buckets_creator_duplicate() -> None:
     assert len(buckets_before) == 1
     assert len(created_buckets) == 1
     assert created_buckets[0] in buckets_before
+
 
 def test_infra_buckets_creator_on_regions() -> None:
     # Create s3 infra buckets based on list of regions and account name

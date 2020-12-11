@@ -3,8 +3,8 @@ import argparse
 import boto3
 import logging
 import re
+import sys
 
-from pathlib import Path
 from typing import Optional, List
 
 _LOG_LEVEL_STRINGS = {
@@ -147,26 +147,7 @@ class InfraBuckets:
             self.log.error("Setting tags for bucket %s failed with error: %s", bucket_name, e)
 
 
-def main(
-        phase: str,
-        purpose: str,
-        ivy_tag: str,
-        regions: Optional[List[str]] = None,
-        log_level: str = 'INFO'
-) -> None:
-    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
-    log = logging.getLogger()  # Gets the root logger
-    log.setLevel(_LOG_LEVEL_STRINGS[log_level])
-    infra_buckets = InfraBuckets(
-        phase=phase,
-        purpose=purpose,
-        ivy_tag=ivy_tag,
-        regions=regions
-    )
-    infra_buckets.create_buckets()
-
-
-if __name__ == "__main__":
+def infra_buckets_parser(arguments) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Creates infrastructure s3 buckets per sysenv"
     )
@@ -200,17 +181,26 @@ if __name__ == "__main__":
         choices=_LOG_LEVEL_STRINGS.keys(),
         help="Set the logging output level"
     )
-    args = parser.parse_args()
+    parsed_args = parser.parse_args(args=arguments)
     regions = None
-    if args.regions:
+    if parsed_args.regions:
         regions = [
             region
-            for region in args.regions.split(",")
+            for region in parsed_args.regions.split(",")
         ]
-    main(
+    parsed_args.regions = regions
+    return parsed_args
+
+
+if __name__ == "__main__":
+    args = infra_buckets_parser(sys.argv[1:])
+    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
+    log = logging.getLogger()  # Gets the root logger
+    log.setLevel(_LOG_LEVEL_STRINGS[args.log_level])
+    infra_buckets = InfraBuckets(
         phase=args.phase,
         purpose=args.purpose,
         ivy_tag=args.ivy_tag,
-        log_level=args.log_level,
-        regions=regions
+        regions=args.regions
     )
+    infra_buckets.create_buckets()
