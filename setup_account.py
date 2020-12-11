@@ -4,11 +4,12 @@ import boto3
 import logging
 
 from boto3.session import Session
+from infra_buckets.infra_buckets import InfraBuckets
 from new_sub_account.new_sub_account import AccountCreator
 from pathlib import Path
 from setup_sso.setup_sso import AccountSetup
 from time import sleep
-from typing import Optional
+from typing import Optional, List
 from vpc_cleaner.vpc_cleaner import VPCCleaner, AccountCleaner
 
 _LOG_LEVEL_STRINGS = {
@@ -25,8 +26,11 @@ def main(
         ivy_tag: str,
         saml_provider: str,
         saml_file: str,
+        phase: str,
+        purpose: str,
         log_level: str = "INFO",
-        email: Optional[str] = None
+        email: Optional[str] = None,
+        regions: Optional[List[str]] = None,
 ) -> None:
     # Setup logging facility
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
@@ -70,6 +74,16 @@ def main(
     cleaner = AccountCleaner(dry_run=False, session=sub_account_session)
     cleaner.clean_all_vpcs_in_all_regions()
 
+    # Create infra buckets
+    infra_buckets = InfraBuckets(
+        phase=phase,
+        purpose=purpose,
+        ivy_tag=ivy_tag,
+        regions=regions,
+        session=sub_account_session
+    )
+    infra_buckets.create_buckets()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -102,6 +116,23 @@ if __name__ == "__main__":
         help="Name of the saml provider. Examples: gsuite, msft"
     )
     parser.add_argument(
+        "-c", "--phase",
+        type=str,
+        required=True,
+        help="AWS Sub Account Phase (prod, dev, stage, ...)"
+    )
+    parser.add_argument(
+        "-p", "--purpose",
+        type=str,
+        required=True,
+        help="AWS Sub Account purpose (app, tools, sandbox, ...)"
+    )
+    parser.add_argument(
+        "-r", "--regions",
+        type=str,
+        help="Comma-separated list of AWS regions"
+    )
+    parser.add_argument(
         "-e", "--e-mail",
         type=str,
         default=None,
@@ -122,11 +153,21 @@ if __name__ == "__main__":
         help="Set the logging output level"
     )
     args = parser.parse_args()
+    regions = None
+    if args.regions:
+        regions = [
+            region
+            for region in args.regions.split(",")
+        ]
+
     main(
-        args.account_name,
-        args.ivy_tag,
-        args.saml_provider,
-        args.saml_file,
-        args.log_level,
-        args.email
+        account_name=args.account_name,
+        ivy_tag=args.ivy_tag,
+        saml_provider=args.saml_provider,
+        saml_file=args.saml_file,
+        log_level=args.log_level,
+        email=args.email,
+        phase=args.phase,
+        purpose=args.purpose,
+        regions=regions
     )

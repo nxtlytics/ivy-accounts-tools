@@ -171,7 +171,7 @@ if __name__ == "__main__":
         description="Creates infrastructure s3 buckets per sysenv"
     )
     parser.add_argument(
-        "-f", "--phase",
+        "-c", "--phase",
         type=str,
         required=True,
         help="AWS Sub Account Phase (prod, dev, stage, ...)"
@@ -201,10 +201,16 @@ if __name__ == "__main__":
         help="Set the logging output level"
     )
     args = parser.parse_args()
+    regions = None
+    if args.regions:
+        regions = [
+            region
+            for region in args.regions.split(",")
+        ]
     main(
         phase=args.phase,
         purpose=args.purpose,
         ivy_tag=args.ivy_tag,
         log_level=args.log_level,
-        regions=args.regions
+        regions=regions
     )
