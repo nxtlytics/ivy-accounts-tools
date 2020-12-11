@@ -19,14 +19,15 @@ _LOG_LEVEL_STRINGS = {
     'DEBUG': logging.DEBUG
 }
 
+
 def main(
         account_name: str,
         ivy_tag: str,
         saml_provider: str,
         saml_file: str,
-        log_level: str = 'INFO',
+        log_level: str = "INFO",
         email: Optional[str] = None
-    ) -> None:
+) -> None:
     # Setup logging facility
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
     log = logging.getLogger()  # Gets the root logger
@@ -69,6 +70,7 @@ def main(
     cleaner = AccountCleaner(dry_run=False, session=sub_account_session)
     cleaner.clean_all_vpcs_in_all_regions()
 
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
         description="""
@@ -95,7 +97,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-s", "--saml-provider-name",
         type=str,
-        default='gsuite',
+        default="gsuite",
         dest="saml_provider",
         help="Name of the saml provider. Examples: gsuite, msft"
     )
@@ -115,7 +117,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-l", "--log-level",
         type=str,
-        default='INFO',
+        default="INFO",
         choices=_LOG_LEVEL_STRINGS.keys(),
         help="Set the logging output level"
     )
