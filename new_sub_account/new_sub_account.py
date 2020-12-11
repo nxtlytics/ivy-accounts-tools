@@ -1,19 +1,13 @@
 #!/usr/bin/env python
 import argparse
 import boto3
-import json
 import logging
 import sys
-import botocore.client
 
-from botocore import session as se
-from botocore.exceptions import BotoCoreError
-from mypy_boto3_organizations.client import OrganizationsClient
-from pathlib import Path
 from time import sleep
 from typing import Optional
 
-_LOG_LEVEL_STRINGS = {
+LOG_LEVEL_STRINGS = {
     'CRITICAL': logging.CRITICAL,
     'ERROR': logging.ERROR,
     'WARNING': logging.WARNING,
@@ -21,29 +15,24 @@ _LOG_LEVEL_STRINGS = {
     'DEBUG': logging.DEBUG
 }
 
+
 class AccountCreator:
     log = logging.getLogger(__name__)
-    client = None
+    session = None
     account_id = None
-    aws_partition = None
+    endpoint_url = None
 
-    def __init__(self, client: Optional[OrganizationsClient] = None, aws_partition: Optional[str] = None) -> None:
-        if client is None:
-            self.client = boto3.client('organizations')
+    def __init__(self, session: Optional[boto3.session.Session] = None, endpoint_url: Optional[str] = None) -> None:
+        if session is None:
+            self.session = boto3.session.Session()
         else:
-            self.client = client
-        if aws_partition is None:
-            self.aws_partition = boto3.client('ec2').meta.partition
-        else:
-            self.aws_partition = aws_partition
+            self.session = session
+        self.client = self.session.client('organizations', endpoint_url=endpoint_url)
 
     def create(self, email: str, name: str) -> None:
-        """ Creates Account based on partition """
-        if self._check_account(email,name):
-            if self.aws_partition == 'aws-us-gov':
-                self.account_id = self._government(email, name)
-            else:
-                self.account_id = self._commercial(email, name)
+        """ Creates Account if it does not exist """
+        if self._check_account(email, name):
+            self.account_id = self._create_account(email, name)
         else:
             self.log.info("No sub account will be created")
 
@@ -52,31 +41,28 @@ class AccountCreator:
         paginator = self.client.get_paginator("list_accounts")
         page_iterator = paginator.paginate()
         for element in page_iterator:
-            for account in element.get('Accounts', []):
-                if name in account.values() or email in account.values():
-                    self.log.info("An account with name %s and/or email %s already exists, its account ID is %s", name, email, account['Id'])
-                    self.account_id = account['Id']
+            for acc in element.get('Accounts', []):
+                if name in acc.values() or email in acc.values():
+                    self.log.info(
+                        "An account with name %s and/or email %s already exists, its account ID is %s",
+                        name,
+                        email,
+                        acc['Id']
+                    )
+                    self.account_id = acc['Id']
                     return False
         else:
             self.log.info("Did not find an account with name %s nor email %s", name, email)
             return True
 
-    def _commercial(self, email: str, name: str) -> str:
-        """ Create Commercial Account """
+    def _create_account(self, email: str, name: str) -> str:
+        """ Create Sub Account """
         self.log.debug("I will try to create commercial account with name %s", name)
         account_status = self.client.create_account(
             Email=email,
             AccountName=name
         )['CreateAccountStatus']
         return self._get_status(account_status)['AccountId']
-
-    def _goverment(self, email: str, name: str) -> str:
-        """ Create Government Account """
-        account_status = self.client.create_gov_cloud_account(
-            Email=email,
-            AccountName=name
-        )['CreateAccountStatus']
-        return self._get_status(account_status)['GovCloudAccountId']
 
     def _get_status(self, account_status: dict) -> dict:
         """ Get Account Creation Status """
@@ -112,18 +98,8 @@ class AccountCreator:
             self.log.exception("Account creation failed")
             raise Exception
 
-def main(
-        email: str,
-        sub_account_name: str,
-        log_level: str = 'INFO'
-    ) -> None:
-    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
-    log = logging.getLogger()  # Gets the root logger
-    log.setLevel(_LOG_LEVEL_STRINGS[log_level])
-    account = AccountCreator()
-    account.create(email, sub_account_name)
 
-if __name__ == "__main__":
+def new_sub_account_parser(arguments) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Creates new AWS sub-account"
     )
@@ -144,12 +120,19 @@ if __name__ == "__main__":
         "-l", "--log-level",
         type=str,
         default='INFO',
-        choices=_LOG_LEVEL_STRINGS.keys(),
+        choices=LOG_LEVEL_STRINGS.keys(),
         help="Set the logging output level"
     )
-    args = parser.parse_args()
-    main(
-        args.email,
-        args.sub_account_name,
-        args.log_level
+    return parser.parse_args(arguments)
+
+
+if __name__ == "__main__":
+    args = new_sub_account_parser(sys.argv[1:])
+    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
+    log = logging.getLogger()  # Gets the root logger
+    log.setLevel(LOG_LEVEL_STRINGS[args.log_level])
+    account = AccountCreator()
+    account.create(
+        email=args.email,
+        name=args.sub_account_name
     )
