@@ -6,7 +6,7 @@ verify_ssl = true
 [scripts]
 lint = "python -m black --target-version py38 --line-length 120 --check ."
 lint-fix = "python -m black --target-version py38 --line-length 120 ."
-test = "python -m pytest -v --cov=. tests/ --junitxml=tmp/test-output/pytest.xml"
+test = "python -m pytest -v --cov=. tests/ -o junit_family=xunit2 --junitxml=tmp/test-output/pytest.xml"
 
 [dev-packages]
 pytest = "==6.0.2"
