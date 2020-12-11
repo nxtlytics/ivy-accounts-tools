@@ -95,13 +95,27 @@ class InfraBuckets:
             region: str
     ) -> None:
         try:
-            self.client.create_bucket(
-                ACL='private',
-                Bucket=bucket_name,
-                CreateBucketConfiguration={
-                    'LocationConstraint': region
-                }
-            )
+            if region == 'us-east-1':
+                self.session.client(
+                    "s3",
+                    region_name=region,
+                    endpoint_url=self.endpoint_url
+                ).create_bucket(
+                    ACL='private',
+                    Bucket=bucket_name
+                )
+            else:
+                self.session.client(
+                    "s3",
+                    region_name=region,
+                    endpoint_url=self.endpoint_url
+                ).create_bucket(
+                    ACL='private',
+                    Bucket=bucket_name,
+                    CreateBucketConfiguration={
+                        'LocationConstraint': region
+                    }
+                )
             self.log.info("Bucket %s creation succeeded", bucket_name)
         except Exception as e:
             self.log.error("Bucket %s creation failed with error: %s", bucket_name, e)

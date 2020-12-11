@@ -3,7 +3,6 @@ import argparse
 import boto3
 import logging
 
-from mypy_boto3_iam.client import IAMClient
 from pathlib import Path
 from typing import Optional
 
@@ -15,6 +14,7 @@ _LOG_LEVEL_STRINGS = {
     'DEBUG': logging.DEBUG
 }
 
+
 class AccountSetup:
     log = logging.getLogger(__name__)
     alias_name = None
@@ -25,7 +25,8 @@ class AccountSetup:
         'aws-cn': 'https://signin.amazonaws.cn/saml',
         'aws-us-gov': 'https://signin.amazonaws-us-gov.com/saml'
     }
-    start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow","Condition":{"StringEquals":{"SAML:aud":"'
+    start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow",' \
+                      '"Condition":{"StringEquals":{"SAML:aud":" '
     middle_of_policy = '"}},"Principal":{"Federated":"'
     end_of_policy = '"}}]}'
 
@@ -102,7 +103,7 @@ class AccountSetup:
     def _attach_role_policy(self, role_name: str, policy_arn: str) -> None:
         """ Attach a policy to am IAM Role """
         try:
-            attach_response = self.client.attach_role_policy(
+            self.client.attach_role_policy(
                 RoleName=role_name,
                 PolicyArn=policy_arn
             )
@@ -113,7 +114,11 @@ class AccountSetup:
         """ Create Role and attach a Policy to it """
         if self.roles_arn.get(role_name) is None:
             try:
-                self.log.info("I will try to create role with name %s for account ID %s", role_name, self.saml_provider.split(':')[4])
+                self.log.info(
+                    "I will try to create role with name %s for account ID %s",
+                    role_name,
+                    self.saml_provider.split(':')[4]
+                )
                 role = self._create_role(role_name, policy_document)
                 self._attach_role_policy(role_name, policy_arn)
                 self.roles_arn[role_name] = role['Arn']
@@ -126,15 +131,30 @@ class AccountSetup:
         """ Create Default Roles """
         try:
             aws_partition = self.saml_provider.split(':')[1]
-            policy_document = self.start_of_policy + self.saml_audiences[aws_partition] + self.middle_of_policy + self.saml_provider + self.end_of_policy
+            policy_document = ''.join([
+                self.start_of_policy,
+                self.saml_audiences[aws_partition],
+                self.middle_of_policy,
+                self.saml_provider,
+                self.end_of_policy
+            ])
             admin_role_name = 'SSOAdministratorAccess'
             admin_policy_arn = f"arn:{aws_partition}:iam::aws:policy/AdministratorAccess"
-            self.create_role(role_name=admin_role_name, policy_arn=admin_policy_arn, policy_document=policy_document)
+            self.create_role(
+                role_name=admin_role_name,
+                policy_arn=admin_policy_arn,
+                policy_document=policy_document
+            )
             read_role_name = 'SSOViewOnlyAccess'
             read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/job-function/ViewOnlyAccess"
-            self.create_role(role_name=read_role_name, policy_arn=read_policy_arn, policy_document=policy_document)
+            self.create_role(
+                role_name=read_role_name,
+                policy_arn=read_policy_arn,
+                policy_document=policy_document
+            )
         except Exception as e:
             self.log.exception("Creation of default roles failed with error %s", e)
+
 
 def main(
         sub_account_name: str,
@@ -142,7 +162,7 @@ def main(
         saml_provider: str,
         saml_file: str,
         log_level: str = 'INFO'
-    ) -> None:
+) -> None:
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[log_level])
@@ -152,6 +172,7 @@ def main(
     saml_path = Path(saml_file)
     setup_sso.saml(saml_name, saml_path)
     setup_sso.create_default_roles()
+
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(
@@ -192,10 +213,9 @@ if __name__ == "__main__":
     )
     args = parser.parse_args()
     main(
-        args.sub_account_name,
-        args.ivy_tag,
-        args.saml_provider,
-        args.saml_file,
-        args.gov_account_name,
-        args.log_level
+        sub_account_name=args.sub_account_name,
+        ivy_tag=args.ivy_tag,
+        saml_provider=args.saml_provider,
+        saml_file=args.saml_file,
+        log_level=args.log_level
     )

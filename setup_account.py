@@ -10,7 +10,7 @@ from pathlib import Path
 from setup_sso.setup_sso import AccountSetup
 from time import sleep
 from typing import Optional, List
-from vpc_cleaner.vpc_cleaner import VPCCleaner, AccountCleaner
+from vpc_cleaner.vpc_cleaner import AccountCleaner
 
 _LOG_LEVEL_STRINGS = {
     'CRITICAL': logging.CRITICAL,
@@ -30,7 +30,7 @@ def main(
         purpose: str,
         log_level: str = "INFO",
         email: Optional[str] = None,
-        regions: Optional[List[str]] = None,
+        regions: Optional[List[str]] = None
 ) -> None:
     # Setup logging facility
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
@@ -43,7 +43,7 @@ def main(
         account = AccountCreator()
         account.create(email, account_name)
         sub_account_role_arn = f"arn:aws:iam::{account.account_id}:role/OrganizationAccountAccessRole"
-        sleep_time: int = 10
+        sleep_time: int = 20
         log.info(f"Waiting {sleep_time} seconds after account was created before assuming sub account role")
         sleep(sleep_time)
         assume_role = boto3.client('sts').assume_role(
@@ -58,7 +58,6 @@ def main(
     else:
         log.info("No E-Mail was provided so I will not create a sub-account")
         sub_account_session = None
-        sub_account_iam = None
 
     # Setup AWS alias and roles
     setup_sso = AccountSetup(session=sub_account_session)
