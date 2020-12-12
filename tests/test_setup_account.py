@@ -5,7 +5,7 @@ import logging
 from pathlib import Path
 
 from new_sub_account.new_sub_account import new_sub_account_parser, AccountCreator
-from setup_sso.setup_sso import AccountSetup
+from setup_sso.setup_sso import setup_sso_parser, AccountSetup
 from vpc_cleaner.vpc_cleaner import AccountCleaner
 from infra_buckets.infra_buckets import infra_buckets_parser, InfraBuckets
 
@@ -20,6 +20,8 @@ ivy_tag = 'ivy'
 saml_provider = 'gsuite'
 saml_doc = './tests/test_saml.xml'
 email = 'infeng+' + account_name + 'example.com'
+saml_name = ivy_tag + '-' + saml_provider
+saml_file = Path(saml_doc)
 phase = 'test'
 purpose = 'sandbox'
 commercial_region = 'us-west-2'
@@ -47,6 +49,7 @@ def test_sub_account_parser() -> None:
     assert parsed_args.email == email
     assert parsed_args.log_level == 'INFO'
 
+
 def test_sub_account_creation() -> None:
     # Create sub account
     account = AccountCreator(session=commercial_session, endpoint_url=endpoint_url)
@@ -68,29 +71,81 @@ def test_sub_account_duplicate() -> None:
     assert len(accounts) == 2
 
 
+def test_account_setup_parser() -> None:
+    arguments = [
+        '-a', account_name,
+        '-f', saml_doc,
+        '-s', saml_provider,
+        '-t', ivy_tag
+    ]
+    parsed_args = setup_sso_parser(arguments)
+    assert parsed_args.sub_account_name == account_name
+    assert parsed_args.saml_file == saml_doc
+    assert parsed_args.saml_provider == saml_provider
+    assert parsed_args.ivy_tag == ivy_tag
+    assert parsed_args.log_level == 'INFO'
+
+
 def test_account_setup() -> None:
     # Setup AWS alias and roles
-    setup_sso = AccountSetup(session=commercial_session, endpoint_url=endpoint_url)
-    setup_sso.alias(account_name)
-    saml_name = ivy_tag + '-' + saml_provider
-    saml_file = Path(saml_doc)
-    setup_sso.saml(saml_name, saml_file)
+    setup_sso = AccountSetup(
+        alias_name=account_name,
+        saml_provider_name=saml_name,
+        saml_provider_file=saml_file,
+        session=commercial_session,
+        endpoint_url=endpoint_url
+    )
+    setup_sso.alias()
+    setup_sso.saml()
     setup_sso.create_default_roles()
-    assert setup_sso.alias_name == account_name
-    assert setup_sso.saml_provider == 'arn:aws:iam::000000000000:saml-provider/ivy-gsuite'
-    assert 'SSOAdministratorAccess' in setup_sso.roles_arn.keys()
-    assert 'SSOViewOnlyAccess' in setup_sso.roles_arn.keys()
+    aliases = [
+        alias
+        for alias in commercial_iam_client.list_account_aliases()['AccountAliases']
+    ]
+    saml_providers = [
+        provider['Arn']
+        for provider in commercial_iam_client.list_saml_providers()['SAMLProviderList']
+    ]
+    roles = [
+        role['Arn']
+        for role in commercial_iam_client.list_roles()['Roles']
+    ]
+    assert account_name in aliases
+    assert 'arn:aws:iam::000000000000:saml-provider/ivy-gsuite' in saml_providers
+    assert 'arn:aws:iam::000000000000:role/SSOAdministratorAccess' in roles
+    assert 'arn:aws:iam::000000000000:role/SSOViewOnlyAccess' in roles
 
-def test_account_alias_duplicate() -> None:
+def test_account_setup_duplicate() -> None:
     """
     Try to setup an alias with the same name
     it should fine the previous one and not create it
     aliases should be equal to 1
     """
-    setup_sso = AccountSetup(session=commercial_session, endpoint_url=endpoint_url)
-    setup_sso.alias(account_name)
-    aliases = commercial_iam_client.list_account_aliases()['AccountAliases']
+    setup_sso = AccountSetup(
+        alias_name=account_name,
+        saml_provider_name=saml_name,
+        saml_provider_file=saml_file,
+        session=commercial_session,
+        endpoint_url=endpoint_url
+    )
+    setup_sso.alias()
+    setup_sso.saml()
+    setup_sso.create_default_roles()
+    aliases = [
+        alias
+        for alias in commercial_iam_client.list_account_aliases()['AccountAliases']
+    ]
+    saml_providers = [
+        provider['Arn']
+        for provider in commercial_iam_client.list_saml_providers()['SAMLProviderList']
+    ]
+    roles = [
+        role['Arn']
+        for role in commercial_iam_client.list_roles()['Roles']
+    ]
     assert len(aliases) == 1
+    assert len(saml_providers) == 1
+    assert len(roles) == 2
 
 
 def test_vpc_cleaner() -> None:

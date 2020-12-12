@@ -2,6 +2,7 @@
 import argparse
 import boto3
 import logging
+import sys
 
 from pathlib import Path
 from typing import Optional
@@ -17,9 +18,6 @@ _LOG_LEVEL_STRINGS = {
 
 class AccountSetup:
     log = logging.getLogger(__name__)
-    alias_name = None
-    saml_provider = None
-    roles_arn: dict = {}
     saml_audiences: dict = {
         'aws': 'https://signin.aws.amazon.com/saml',
         'aws-cn': 'https://signin.amazonaws.cn/saml',
@@ -32,26 +30,44 @@ class AccountSetup:
 
     def __init__(
             self,
+            alias_name: str,
+            saml_provider_name: str,
+            saml_provider_file: Path,
             session: Optional[boto3.session.Session] = None,
             endpoint_url: Optional[str] = None
     ) -> None:
+        self.alias_name = alias_name
+        self.saml_provider_name = saml_provider_name
+        self.saml_provider_file = saml_provider_file
         if session is None:
             self.session = boto3.session.Session()
         else:
             self.session = session
         self.endpoint_url = endpoint_url
+        self.account_id = self.session.client(
+            'sts',
+            endpoint_url=self.endpoint_url
+        ).get_caller_identity().get('Account')
+        self.aws_partition = self.session.client(
+            'ec2',
+            endpoint_url=self.endpoint_url
+        ).meta.partition
+        self.saml_provider_arn = f"arn:{self.aws_partition}:iam::{self.account_id}:saml-provider/{self.saml_provider_name}"
+        self.roles_arn = {
+            'SSOAdministratorAccess': f"arn:{self.aws_partition}:iam::{self.account_id}:role/SSOAdministratorAccess",
+            'SSOViewOnlyAccess': f"arn:{self.aws_partition}:iam::{self.account_id}:role/SSOViewOnlyAccess"
+        }
         self.client = self.session.client('iam', endpoint_url=self.endpoint_url)
 
-    def alias(self, account_alias: str) -> None:
+    def alias(self) -> None:
         """ Setup Account Alias """
-        if self._check_alias(account_alias):
-            self.log.debug("I will try to setup account_alias: %s", account_alias)
+        if self._check_alias(self.alias_name):
+            self.log.info("I will try to setup account_alias: %s", self.alias_name)
             try:
-                alias = self.client.create_account_alias(
-                    AccountAlias=account_alias
+                self.client.create_account_alias(
+                    AccountAlias=self.alias_name
                 )
-                self.log.debug("Account alias was setup with response %s", alias)
-                self.alias_name = account_alias
+                self.log.info("Account alias %s was created", self.alias_name)
             except Exception as e:
                 self.log.exception("Account alias was not setup with error %s", e)
         else:
@@ -71,22 +87,33 @@ class AccountSetup:
             self.log.info("Did not find an account alias with name %s", account_alias)
             return True
 
-    def saml(self, name: str, saml_file: Path) -> None:
+    def saml(self) -> None:
         """ Setup SAML Provider """
-        if self.saml_provider is None:
-            self.log.debug("I will try to setup SAML provider %s", name)
-            with saml_file.open() as f:
+        if self._check_saml_provider():
+            self.log.info("I will try to setup SAML provider %s", self.saml_provider_name)
+            with self.saml_provider_file.open() as f:
                 try:
                     saml = self.client.create_saml_provider(
                         SAMLMetadataDocument=f.read(),
-                        Name=name
+                        Name=self.saml_provider_name
                     )
-                    self.log.debug("SAML provider ARN is %s", saml['SAMLProviderArn'])
-                    self.saml_provider = saml['SAMLProviderArn']
+                    self.log.info("SAML provider ARN is %s", saml['SAMLProviderArn'])
+                    self.saml_provider_arn = saml['SAMLProviderArn']
                 except Exception as e:
                     self.log.exception("SAML provider setup failed with error %s", e)
         else:
-            self.log.info("SAML provider has been setup and its ARN is %s", self.saml_provider)
+            self.log.info("SAML provider has been setup and its ARN is %s", self.saml_provider_arn)
+
+    def _check_saml_provider(self) -> bool:
+        """ Check if saml provider has been created """
+        saml_providers = [
+            provider['Arn']
+            for provider in self.client.list_saml_providers()['SAMLProviderList']
+        ]
+        if self.saml_provider_arn in saml_providers:
+            return False
+        else:
+            return True
 
     def _create_role(self, role_name: str, policy_document: str) -> dict:
         """ Create an IAM Role """
@@ -112,30 +139,41 @@ class AccountSetup:
 
     def create_role(self, role_name: str, policy_arn: str, policy_document: str) -> None:
         """ Create Role and attach a Policy to it """
-        if self.roles_arn.get(role_name) is None:
+        if self._check_role(role_name=role_name):
             try:
                 self.log.info(
                     "I will try to create role with name %s for account ID %s",
                     role_name,
-                    self.saml_provider.split(':')[4]
+                    self.saml_provider_arn.split(':')[4]
                 )
                 role = self._create_role(role_name, policy_document)
                 self._attach_role_policy(role_name, policy_arn)
                 self.roles_arn[role_name] = role['Arn']
+                self.log.info("Role was created, its ARN is %s", role['Arn'])
             except Exception as e:
                 self.log.exception("Creation of role %s failed with error %s", role_name, e)
         else:
             self.log.info("Role already exists, its ARN is %s", self.roles_arn.get(role_name))
 
+    def _check_role(self, role_name: str) -> bool:
+        current_roles = [
+            role['Arn']
+            for role in self.client.list_roles()['Roles']
+        ]
+        if self.roles_arn[role_name] in current_roles:
+            return False
+        else:
+            return True
+
     def create_default_roles(self) -> None:
         """ Create Default Roles """
         try:
-            aws_partition = self.saml_provider.split(':')[1]
+            aws_partition = self.saml_provider_arn.split(':')[1]
             policy_document = ''.join([
                 self.start_of_policy,
                 self.saml_audiences[aws_partition],
                 self.middle_of_policy,
-                self.saml_provider,
+                self.saml_provider_arn,
                 self.end_of_policy
             ])
             admin_role_name = 'SSOAdministratorAccess'
@@ -156,25 +194,8 @@ class AccountSetup:
             self.log.exception("Creation of default roles failed with error %s", e)
 
 
-def main(
-        sub_account_name: str,
-        ivy_tag: str,
-        saml_provider: str,
-        saml_file: str,
-        log_level: str = 'INFO'
-) -> None:
-    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
-    log = logging.getLogger()  # Gets the root logger
-    log.setLevel(_LOG_LEVEL_STRINGS[log_level])
-    setup_sso = AccountSetup()
-    setup_sso.alias(sub_account_name)
-    saml_name = ivy_tag + '-' + saml_provider
-    saml_path = Path(saml_file)
-    setup_sso.saml(saml_name, saml_path)
-    setup_sso.create_default_roles()
 
-
-if __name__ == "__main__":
+def setup_sso_parser(arguments) -> argparse.Namespace:
     parser = argparse.ArgumentParser(
         description="Sets up an AWS account's alias, SAML provider, Admin role and Read-Only role"
     )
@@ -211,11 +232,20 @@ if __name__ == "__main__":
         choices=_LOG_LEVEL_STRINGS.keys(),
         help="Set the logging output level"
     )
-    args = parser.parse_args()
-    main(
-        sub_account_name=args.sub_account_name,
-        ivy_tag=args.ivy_tag,
-        saml_provider=args.saml_provider,
-        saml_file=args.saml_file,
-        log_level=args.log_level
+    return parser.parse_args(arguments)
+
+if __name__ == "__main__":
+    args = setup_sso_parser(sys.argv[1:])
+    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
+    log = logging.getLogger()  # Gets the root logger
+    log.setLevel(_LOG_LEVEL_STRINGS[args.log_level])
+    saml_name = args.ivy_tag + '-' + args.saml_provider
+    saml_path = Path(args.saml_file)
+    setup_sso = AccountSetup(
+        alias_name=args.sub_account_name,
+        saml_provider_name=saml_name,
+        saml_provider_file=saml_path
     )
+    setup_sso.alias()
+    setup_sso.saml()
+    setup_sso.create_default_roles()

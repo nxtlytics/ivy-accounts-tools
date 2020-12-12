@@ -60,11 +60,16 @@ def main(
         sub_account_session = None
 
     # Setup AWS alias and roles
-    setup_sso = AccountSetup(session=sub_account_session)
-    setup_sso.alias(account_name)
     saml_name = ivy_tag + '-' + saml_provider
     saml_path = Path(saml_file)
-    setup_sso.saml(saml_name, saml_path)
+    setup_sso = AccountSetup(
+        alias_name=account_name,
+        saml_provider_name=saml_name,
+        saml_provider_file=saml_path,
+        session=sub_account_session
+    )
+    setup_sso.alias()
+    setup_sso.saml()
     setup_sso.create_default_roles()
 
     # Clean vpcs in all regions
