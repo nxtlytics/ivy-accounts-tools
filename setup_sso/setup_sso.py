@@ -24,7 +24,7 @@ class AccountSetup:
         'aws-us-gov': 'https://signin.amazonaws-us-gov.com/saml'
     }
     start_of_policy = '{"Version":"2012-10-17","Statement":[{"Action":"sts:AssumeRoleWithSAML","Effect":"Allow",' \
-                      '"Condition":{"StringEquals":{"SAML:aud":" '
+                      '"Condition":{"StringEquals":{"SAML:aud":"'
     middle_of_policy = '"}},"Principal":{"Federated":"'
     end_of_policy = '"}}]}'
 
