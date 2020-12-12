@@ -1,5 +1,6 @@
 #!/usr/bin/env python
 import boto3
+import json
 import logging
 
 from pathlib import Path
@@ -107,13 +108,25 @@ def test_account_setup() -> None:
         for provider in commercial_iam_client.list_saml_providers()['SAMLProviderList']
     ]
     roles = [
-        role['Arn']
+        role
         for role in commercial_iam_client.list_roles()['Roles']
+    ]
+    roles_arn = [
+        role['Arn']
+        for role in roles
+    ]
+    # The changes below are specific to localstack
+    # AWS saves AssumeRolePolicyDocument as a dictionary
+    # localstack saves AssumeRolePolicyDocument as a string
+    roles_aud = [
+        json.loads(role['AssumeRolePolicyDocument'])['Statement'][0]['Condition']['StringEquals']['SAML:aud']
+        for role in roles if role['RoleName'] == 'SSOAdministratorAccess'
     ]
     assert account_name in aliases
     assert 'arn:aws:iam::000000000000:saml-provider/ivy-gsuite' in saml_providers
-    assert 'arn:aws:iam::000000000000:role/SSOAdministratorAccess' in roles
-    assert 'arn:aws:iam::000000000000:role/SSOViewOnlyAccess' in roles
+    assert 'arn:aws:iam::000000000000:role/SSOAdministratorAccess' in roles_arn
+    assert 'arn:aws:iam::000000000000:role/SSOViewOnlyAccess' in roles_arn
+    assert setup_sso.saml_audiences['aws'] == roles_aud[0]
 
 def test_account_setup_duplicate() -> None:
     """
