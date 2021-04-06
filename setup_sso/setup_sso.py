@@ -184,7 +184,7 @@ class AccountSetup:
                 policy_document=policy_document
             )
             read_role_name = 'SSOViewOnlyAccess'
-            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/job-function/ViewOnlyAccess"
+            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"
             self.create_role(
                 role_name=read_role_name,
                 policy_arn=read_policy_arn,
