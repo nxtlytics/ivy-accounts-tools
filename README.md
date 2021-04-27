@@ -2,7 +2,7 @@
 
 ## Creating a new AWS account
 
-- SEE [Ivy Docs](https://github.com/nxtlytics/ivy-documentation/blob/master/howto/Processes/Creating_new_AWS_GovCloud_accounts.md) INSTEAD!
+- SEE [Ivy Docs](https://github.com/nxtlytics/ivy-documentation/blob/master/howto/Processes/Creating_new_AWS_subaccount.md) INSTEAD!
 
 ### How to use
 
