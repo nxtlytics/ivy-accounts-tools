@@ -39,12 +39,12 @@ def main(
 
     if email:
         log.info("I will try to create sub-account %s", account_name)
+        sleep_time: int = 50
         # Create sub account
         account = AccountCreator()
         account.create(email, account_name)
         sub_account_role_arn = f"arn:aws:iam::{account.account_id}:role/OrganizationAccountAccessRole"
-        sleep_time: int = 20
-        log.info(f"Waiting {sleep_time} seconds after account was created before assuming sub account role")
+        log.info(f"Waiting {sleep_time} seconds after account was created before assuming sub account role, creating alias and removing default VPCs")
         sleep(sleep_time)
         assume_role = boto3.client('sts').assume_role(
             RoleArn=sub_account_role_arn,
