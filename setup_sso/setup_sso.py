@@ -55,7 +55,8 @@ class AccountSetup:
         self.saml_provider_arn = f"arn:{self.aws_partition}:iam::{self.account_id}:saml-provider/{self.saml_provider_name}"
         self.roles_arn = {
             'SSOAdministratorAccess': f"arn:{self.aws_partition}:iam::{self.account_id}:role/SSOAdministratorAccess",
-            'SSOViewOnlyAccess': f"arn:{self.aws_partition}:iam::{self.account_id}:role/SSOViewOnlyAccess"
+            'SSOViewOnlyAccess': f"arn:{self.aws_partition}:iam::{self.account_id}:role/SSOViewOnlyAccess",
+            'SSODeveloperAccess': f"arn:{self.aws_partition}:iam::{self.account_id}:role/SSODeveloperAccess"
         }
         self.client = self.session.client('iam', endpoint_url=self.endpoint_url)
 
@@ -185,6 +186,13 @@ class AccountSetup:
             )
             read_role_name = 'SSOViewOnlyAccess'
             read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"
+            self.create_role(
+                role_name=read_role_name,
+                policy_arn=read_policy_arn,
+                policy_document=policy_document
+            )
+            read_role_name = 'SSODeveloperAccess'
+            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/SystemAdministrator"
             self.create_role(
                 role_name=read_role_name,
                 policy_arn=read_policy_arn,
