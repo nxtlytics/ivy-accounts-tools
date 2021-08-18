@@ -138,7 +138,7 @@ class AccountSetup:
         except Exception as e:
             self.log.exception("Policy %s failed to attach to role %s with error %s", policy_arn, role_name, e)
 
-    def create_role(self, role_name: str, policy_arn: str, policy_document: str) -> None:
+    def create_role(self, role_name: str, policy_arns: list, policy_document: str) -> None:
         """ Create Role and attach a Policy to it """
         if self._check_role(role_name=role_name):
             try:
@@ -148,7 +148,8 @@ class AccountSetup:
                     self.saml_provider_arn.split(':')[4]
                 )
                 role = self._create_role(role_name, policy_document)
-                self._attach_role_policy(role_name, policy_arn)
+                for policy_arn in policy_arns:
+                    self._attach_role_policy(role_name, policy_arn)
                 self.roles_arn[role_name] = role['Arn']
                 self.log.info("Role was created, its ARN is %s", role['Arn'])
             except Exception as e:
@@ -178,24 +179,24 @@ class AccountSetup:
                 self.end_of_policy
             ])
             admin_role_name = 'SSOAdministratorAccess'
-            admin_policy_arn = f"arn:{aws_partition}:iam::aws:policy/AdministratorAccess"
+            admin_policy_arn = [f"arn:{aws_partition}:iam::aws:policy/AdministratorAccess"]
             self.create_role(
                 role_name=admin_role_name,
-                policy_arn=admin_policy_arn,
+                policy_arns=admin_policy_arn,
                 policy_document=policy_document
             )
             read_role_name = 'SSOViewOnlyAccess'
-            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"
+            read_policy_arn = [f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"]
             self.create_role(
                 role_name=read_role_name,
-                policy_arn=read_policy_arn,
+                policy_arns=read_policy_arn,
                 policy_document=policy_document
             )
             read_role_name = 'SSODeveloperAccess'
-            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/SystemAdministrator"
+            read_policy_arn = [f"arn:{aws_partition}:iam::aws:policy/SystemAdministrator",f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"]
             self.create_role(
                 role_name=read_role_name,
-                policy_arn=read_policy_arn,
+                policy_arns=read_policy_arn,
                 policy_document=policy_document
             )
         except Exception as e:
