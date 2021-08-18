@@ -193,7 +193,7 @@ class AccountSetup:
                 policy_document=policy_document
             )
             read_role_name = 'SSODeveloperAccess'
-            read_policy_arn = [f"arn:{aws_partition}:iam::aws:policy/SystemAdministrator",f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"]
+            read_policy_arn = [f"arn:{aws_partition}:iam::aws:policy/job-function/SystemAdministrator",f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"]
             self.create_role(
                 role_name=read_role_name,
                 policy_arns=read_policy_arn,
