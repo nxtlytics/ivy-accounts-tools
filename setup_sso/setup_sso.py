@@ -191,11 +191,11 @@ class AccountSetup:
                 policy_arn=read_policy_arn,
                 policy_document=policy_document
             )
-            read_role_name = 'SSODeveloperAccess'
-            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/SystemAdministrator"
+            dev_role_name = 'SSODeveloperAccess'
+            dev_policy_arn = f"arn:{aws_partition}:iam::aws:policy/job-function/SystemAdministrator"
             self.create_role(
-                role_name=read_role_name,
-                policy_arn=read_policy_arn,
+                role_name=dev_role_name,
+                policy_arn=dev_policy_arn,
                 policy_document=policy_document
             )
         except Exception as e:
