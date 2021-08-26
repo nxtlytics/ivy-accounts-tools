@@ -20,7 +20,7 @@ account_name = 'ivy-test-sub-account'
 ivy_tag = 'ivy'
 saml_provider = 'gsuite'
 saml_doc = './tests/test_saml.xml'
-email = 'infeng+' + account_name + 'example.com'
+email = 'infeng+' + account_name + '@example.com'
 saml_name = ivy_tag + '-' + saml_provider
 saml_file = Path(saml_doc)
 phase = 'test'
@@ -158,7 +158,7 @@ def test_account_setup_duplicate() -> None:
     ]
     assert len(aliases) == 1
     assert len(saml_providers) == 1
-    assert len(roles) == 2
+    assert len(roles) == 3
 
 
 def test_vpc_cleaner() -> None:

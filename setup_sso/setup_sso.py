@@ -5,7 +5,7 @@ import logging
 import sys
 
 from pathlib import Path
-from typing import Optional
+from typing import Optional, List
 
 _LOG_LEVEL_STRINGS = {
     'CRITICAL': logging.CRITICAL,
@@ -138,7 +138,7 @@ class AccountSetup:
         except Exception as e:
             self.log.exception("Policy %s failed to attach to role %s with error %s", policy_arn, role_name, e)
 
-    def create_role(self, role_name: str, policy_arn: str, policy_document: str) -> None:
+    def create_role(self, role_name: str, policies: List[str], policy_document: str) -> None:
         """ Create Role and attach a Policy to it """
         if self._check_role(role_name=role_name):
             try:
@@ -148,7 +148,8 @@ class AccountSetup:
                     self.saml_provider_arn.split(':')[4]
                 )
                 role = self._create_role(role_name, policy_document)
-                self._attach_role_policy(role_name, policy_arn)
+                for policy in policies:
+                    self._attach_role_policy(role_name, policy)
                 self.roles_arn[role_name] = role['Arn']
                 self.log.info("Role was created, its ARN is %s", role['Arn'])
             except Exception as e:
@@ -178,24 +179,24 @@ class AccountSetup:
                 self.end_of_policy
             ])
             admin_role_name = 'SSOAdministratorAccess'
-            admin_policy_arn = f"arn:{aws_partition}:iam::aws:policy/AdministratorAccess"
+            admin_policies = [f"arn:{aws_partition}:iam::aws:policy/AdministratorAccess"]
             self.create_role(
                 role_name=admin_role_name,
-                policy_arn=admin_policy_arn,
+                policies=admin_policies,
                 policy_document=policy_document
             )
             read_role_name = 'SSOViewOnlyAccess'
-            read_policy_arn = f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"
+            read_policies = [f"arn:{aws_partition}:iam::aws:policy/ReadOnlyAccess"]
             self.create_role(
                 role_name=read_role_name,
-                policy_arn=read_policy_arn,
+                policies=read_policies,
                 policy_document=policy_document
             )
             dev_role_name = 'SSODeveloperAccess'
-            dev_policy_arn = f"arn:{aws_partition}:iam::aws:policy/job-function/SystemAdministrator"
+            dev_policies = [f"arn:{aws_partition}:iam::aws:policy/job-function/SystemAdministrator"]
             self.create_role(
                 role_name=dev_role_name,
-                policy_arn=dev_policy_arn,
+                policies=dev_policies,
                 policy_document=policy_document
             )
         except Exception as e:
@@ -225,7 +226,7 @@ def setup_sso_parser(arguments) -> argparse.Namespace:
         type=str,
         default="gsuite",
         dest="saml_provider",
-        help="Name of the saml provider. Examples: gsuite, msft"
+        help="Name of the saml provider. Examples: gsuite, azuread"
     )
     parser.add_argument(
         "-t", "--ivy-tag",
