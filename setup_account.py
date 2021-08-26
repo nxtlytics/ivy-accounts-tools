@@ -115,7 +115,7 @@ if __name__ == "__main__":
         type=str,
         default="gsuite",
         dest="saml_provider",
-        help="Name of the saml provider. Examples: gsuite, msft"
+        help="Name of the saml provider. Examples: gsuite, azuread"
     )
     parser.add_argument(
         "-c", "--phase",
