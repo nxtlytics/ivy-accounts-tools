@@ -25,8 +25,8 @@ param purpose string
 
 @allowed([
   'dev'
-  'prod'
   'stage'
+  'prod'
 ])
 @description('SysEnv Phase')
 param phase string
@@ -38,7 +38,7 @@ param phase string
   'Premium_LRS'
 ])
 @description('SysEnv Storage Account type')
-param storageAccountType string = 'Standard_LRS'
+param storageAccountType string = 'Standard_ZRS'
 
 //@description('SysEnv Administrator AzureAD Groups')
 //param administratorGroups array
