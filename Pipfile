@@ -24,6 +24,7 @@ s3transfer = "==0.3.1"
 six = "==1.14.0"
 urllib3 = "==1.25.8"
 boto3-stubs = {extras = ["iam", "organizations"], version = "==1.14.60.0"}
+datadog-api-client = "==1.7.0"
 
 [requires]
 python_version = "3.8"
