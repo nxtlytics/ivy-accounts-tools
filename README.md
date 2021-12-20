@@ -7,7 +7,7 @@
 ### How to use
 
 ```bash
-$ AWS_PROFILE=awsprofile $ pipenv run python setup_account.py --help
+$ AWS_PROFILE=awsprofile pipenv run python setup_account.py --help
 usage: setup_account.py [-h] -a ACCOUNT_NAME -f SAML_FILE [-s SAML_PROVIDER] -c PHASE -p PURPOSE [-r REGIONS] [-e EMAIL] [-t IVY_TAG] [-l {CRITICAL,ERROR,WARNING,INFO,DEBUG}]
 
 1. Creates new sub-account, if email is provided 2. Removes default VPCs 3. Sets account alias 4. Configures SAML 5. Creates default roles and allows access via SAML only
