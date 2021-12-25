@@ -1,0 +1,38 @@
+[tool.poetry]
+name = "ivy-accounts-tools"
+version = "0.1.0"
+description = "Multiple scripts used when creating new accounts"
+authors = ["abvikg", "thecubed","missingcharacter"]
+license = "Mozilla Public License 2.0"
+
+[tool.poetry.dependencies]
+python = "^3.8"
+boto3 = "==1.11.7"
+botocore = "==1.14.7"
+click = "^8.0.3"
+docutils = "==0.15.2"
+jmespath = "==0.9.4"
+python-dateutil = "==2.8.1"
+s3transfer = "==0.3.1"
+six = "==1.14.0"
+urllib3 = "==1.25.8"
+boto3-stubs = {extras = ["iam", "organizations"], version = "==1.14.60.0"}
+datadog-api-client = "==1.7.0"
+
+[tool.poetry.dev-dependencies]
+pytest = "==6.2.5"
+black = "^21.12b0"
+pytest-cov = "==3.0.0"
+# one area poetry lags behind poetry is that shell scripts cannot be ran from `poetry run <task>`
+# so we use poe instead.
+# Maybe after
+poethepoet = "^0.11.0"
+
+[tool.poe.tasks]
+lint = { cmd = "black --check --line-length 120 *.py app/", help = "Use `black` to check the style of the application" }
+lint-fix = { cmd = "black --line-length 120 *.py app/", help = "Same as `lint`, but will fix the application's style to conform with PEP8" }
+test = { cmd = "python -m pytest -v --log-file=tests.log --log-file-level=INFO --cov=. tests/ -o junit_family=xunit2 --junitxml=tmp/test-output/pytest.xml" }
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"

@@ -35,6 +35,6 @@ function start_localstack() {
   bash -c '${IF_SUDO} docker logs -f lstack 2>&1 | { sed "/^RUN TESTS NOW$/ q" && kill -9 $$ ;}' || true
 }
 
-pipenv sync --dev
+poetry install
 start_localstack
-pipenv run test
+poetry run poe test

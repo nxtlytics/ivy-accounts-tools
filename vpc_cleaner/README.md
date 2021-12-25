@@ -4,7 +4,7 @@
 
 ```shell
 $ cd path/to/this/repo
-$ AWS_PROFILE=profile-to-use pipenv run python ./vpc_cleaner/vpc_cleaner.py --help
+$ AWS_PROFILE=profile-to-use poetry run python ./vpc_cleaner/vpc_cleaner.py --help
 Usage: vpc_cleaner.py [OPTIONS]
 
 Options:
