@@ -65,7 +65,7 @@ TOTAL                                  454    141    69%
 
 ### Why we use `poethepoet`
 
-One area poetry lags behind poetry is that shell scripts cannot be ran from `poetry run <task>` so we use poe instead.
+One area poetry lags behind pipenv is that shell scripts cannot be ran from `poetry run <task>` so we use poe instead.
 Maybe after `poetry` version `1.0.0` is released we may stop using it.
 
 See links:
