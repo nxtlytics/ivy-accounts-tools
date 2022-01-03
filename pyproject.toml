@@ -23,7 +23,7 @@ datadog-api-client = "==1.7.0"
 pytest = "==6.2.5"
 black = "^21.12b0"
 pytest-cov = "==3.0.0"
-# one area poetry lags behind poetry is that shell scripts cannot be ran from `poetry run <task>`
+# one area poetry lags behind pipenv is that shell scripts cannot be ran from `poetry run <task>`
 # so we use poe instead.
 # Maybe after
 poethepoet = "^0.11.0"
