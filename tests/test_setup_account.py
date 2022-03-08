@@ -9,6 +9,7 @@ from new_sub_account.new_sub_account import new_sub_account_parser, AccountCreat
 from setup_sso.setup_sso import setup_sso_parser, AccountSetup
 from vpc_cleaner.vpc_cleaner import AccountCleaner
 from infra_buckets.infra_buckets import infra_buckets_parser, InfraBuckets
+from thunder_github_automation.thunder_github_automation import ThunderGithubOIDC
 
 # Setup logging facility
 logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
@@ -160,6 +161,66 @@ def test_account_setup_duplicate() -> None:
     assert len(saml_providers) == 1
     assert len(roles) == 3
 
+
+def test_github_oidc_setup() -> None:
+    """
+    Try to setup GitHub OIDC provider in AWS, and creates a role to allow
+    Thunder's Github Action to manage the SysEnv.
+    """
+    repo = "thunder"
+    org = "some-org"
+    setup_gh_oidc = ThunderGithubOIDC(repository=repo, organization=org, session=commercial_session,
+                                      endpoint_url=endpoint_url)
+    setup_gh_oidc.setup_github_oidc()
+    oidc_providers = [
+        provider['Arn']
+        for provider in commercial_iam_client.list_open_id_connect_providers()['OpenIDConnectProviderList']
+    ]
+    roles = [
+        role
+        for role in commercial_iam_client.list_roles()['Roles']
+    ]
+    roles_arn = [
+        role['Arn']
+        for role in roles
+    ]
+    # The changes below are specific to localstack
+    # AWS saves AssumeRolePolicyDocument as a dictionary
+    # localstack saves AssumeRolePolicyDocument as a string
+    roles_aud = [
+        json.loads(role['AssumeRolePolicyDocument'])['Statement'][0]['Condition']['StringEquals']['token.actions.githubusercontent.com:aud']
+        for role in roles if role['RoleName'] == 'ThunderGithubAutomation'
+    ]
+    roles_repo = [
+        json.loads(role['AssumeRolePolicyDocument'])['Statement'][0]['Condition']['StringLike']['token.actions.githubusercontent.com:sub']
+        for role in roles if role['RoleName'] == 'ThunderGithubAutomation'
+    ]
+    assert 'arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com' in oidc_providers
+    assert 'arn:aws:iam::000000000000:role/ThunderGithubAutomation' in roles_arn
+    assert setup_gh_oidc._github_provider['audience'] == roles_aud[0]
+    assert f"repo:{org}/{repo}" == roles_repo[0]
+
+
+def test_github_oidc_setup_duplicate() -> None:
+    """
+    Try to setup GitHub OIDC provider in AWS, and creates a role to allow
+    Thunder's Github Action to manage the SysEnv.
+    """
+    repo = "thunder"
+    org = "some-org"
+    setup_gh_oidc = ThunderGithubOIDC(repository=repo, organization=org, session=commercial_session,
+                                      endpoint_url=endpoint_url)
+    setup_gh_oidc.setup_github_oidc()
+    oidc_providers = [
+        provider['Arn']
+        for provider in commercial_iam_client.list_open_id_connect_providers()['OpenIDConnectProviderList']
+    ]
+    roles = [
+        role
+        for role in commercial_iam_client.list_roles()['Roles']
+    ]
+    assert len(oidc_providers) == 1
+    assert len(roles) == 4
 
 def test_vpc_cleaner() -> None:
     # Clean vpcs in all regions

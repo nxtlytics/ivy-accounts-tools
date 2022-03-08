@@ -36,7 +36,7 @@ platformdirs = ">=2"
 tomli = ">=0.2.6,<2.0.0"
 typing-extensions = [
     {version = ">=3.10.0.0", markers = "python_version < \"3.10\""},
-    {version = "!=3.10.0.1", markers = "python_version >= \"3.10\""},
+    {version = ">=3.10.0.0,<3.10.0.1 || >3.10.0.1", markers = "python_version >= \"3.10\""},
 ]
 
 [package.extras]
@@ -368,7 +368,7 @@ socks = ["PySocks (>=1.5.6,!=1.5.7,<2.0)"]
 [metadata]
 lock-version = "1.1"
 python-versions = "^3.9"
-content-hash = "913b0a32b8ac0ae1e8054cb6951b5f7a8a02c8576b9bfe4a71ded6a6498f103a"
+content-hash = "fc78d7a8900d7a8b7a0320f9639b0f6d20a537f677878e499b3b7d99e135a347"
 
 [metadata.files]
 atomicwrites = [

@@ -20,12 +20,13 @@ class ThunderGithubOIDC:
     _DEFAULT_ROLE_NAME = "ThunderGithubAutomation"
     _POLICY_NAME = "ThunderAutomationAccess"
 
-    def __init__(self, repository: str, organization: str, role_name: Optional[str],
-                 session: Optional[boto3.session.Session] = None):
+    def __init__(self, repository: str, organization: str, role_name: Optional[str] = None,
+                 session: Optional[boto3.session.Session] = None, endpoint_url: Optional[str] = None):
         self.log = logging.getLogger(self.__class__.__name__)
 
         self.repository = repository
         self.organization = organization
+        self.endpoint_url = endpoint_url
 
         if role_name is None:
             self.role_name = self._DEFAULT_ROLE_NAME
@@ -36,9 +37,9 @@ class ThunderGithubOIDC:
                       self.repository, self.role_name)
 
         if session is None:
-            self.client: IAMClient = boto3.session.Session().client("iam")
+            self.client: IAMClient = boto3.session.Session().client("iam", endpoint_url=self.endpoint_url)
         else:
-            self.client: IAMClient = session.client("iam")
+            self.client: IAMClient = session.client("iam", endpoint_url=self.endpoint_url)
 
     def _check_provider(self) -> Optional[str]:
         # check if the SSO provider exists, return the arn if so
