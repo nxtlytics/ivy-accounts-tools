@@ -203,8 +203,7 @@ def test_github_oidc_setup() -> None:
 
 def test_github_oidc_setup_duplicate() -> None:
     """
-    Try to setup GitHub OIDC provider in AWS, and creates a role to allow
-    Thunder's Github Action to manage the SysEnv.
+    Try to setup duplicate GitHub OIDC provider in AWS. It should NOT create a new one.
     """
     repo = "thunder"
     org = "some-org"
