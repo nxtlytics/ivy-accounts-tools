@@ -29,8 +29,8 @@ pytest-cov = "==3.0.0"
 poethepoet = "^0.11.0"
 
 [tool.poe.tasks]
-lint = { cmd = "black --check --line-length 120 *.py app/", help = "Use `black` to check the style of the application" }
-lint-fix = { cmd = "black --line-length 120 *.py app/", help = "Same as `lint`, but will fix the application's style to conform with PEP8" }
+lint = { cmd = "black --check --line-length 120 *.py */*.py", help = "Use `black` to check the style of the application" }
+lint-fix = { cmd = "black --line-length 120 *.py */*.py", help = "Same as `lint`, but will fix the application's style to conform with PEP8" }
 test = { cmd = "python -m pytest -v --log-file=tests.log --log-file-level=INFO --cov=. tests/ -o junit_family=xunit2 --junitxml=tmp/test-output/pytest.xml" }
 
 [build-system]
