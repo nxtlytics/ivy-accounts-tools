@@ -112,7 +112,7 @@ class ThunderGithubOIDC:
                                     "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
                                 },
                                 "StringLike": {
-                                    "token.actions.githubusercontent.com:sub": f"repo:{self.organization}/{self.repository}"
+                                    "token.actions.githubusercontent.com:sub": f"repo:{self.organization}/{self.repository}:*"
                                 }
                             }
                         }
@@ -162,7 +162,7 @@ class ThunderGithubOIDC:
 
 @click.command()
 @click.option('--repo', required=True, help='GitHub repository name to grant AWS access')
-@click.option('--org', required=True, help='GitHub organization where the repository exists')
+@click.option('--org', required=True, help='GitHub organization where the repository exists. This is case sensitive')
 @click.option('--role-name', '-r', help='Optional name of the IAM role to create')
 @click.option('-v', '--verbose', count=True)
 def cli(repo, org, verbose, role_name):
