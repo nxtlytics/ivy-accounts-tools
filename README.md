@@ -2,9 +2,13 @@
 
 ## Creating a new AWS account
 
-- SEE [Ivy Docs](https://github.com/nxtlytics/ivy-documentation/blob/master/howto/Processes/Creating_new_AWS_subaccount.md) INSTEAD!
+- SEE
+  [Ivy Docs](https://github.com/nxtlytics/ivy-documentation/blob/master/howto/Processes/Creating_new_AWS_subaccount.md)
+  INSTEAD!
 
 ### How to use
+
+<!-- markdownlint-disable MD013 -->
 
 ```bash
 $ AWS_PROFILE=awsprofile poetry run python setup_account.py --help
@@ -33,6 +37,8 @@ optional arguments:
   -l {CRITICAL,ERROR,WARNING,INFO,DEBUG}, --log-level {CRITICAL,ERROR,WARNING,INFO,DEBUG}
                         Set the logging output level
 ```
+
+<!-- markdownlint-enable MD013 -->
 
 ### How to test
 
@@ -65,9 +71,11 @@ TOTAL                                  454    141    69%
 
 ### Why we use `poethepoet`
 
-One area poetry lags behind pipenv is that shell scripts cannot be ran from `poetry run <task>` so we use poe instead.
+One area poetry lags behind pipenv is that shell scripts cannot be ran from
+`poetry run <task>` so we use poe instead.
 Maybe after `poetry` version `1.0.0` is released we may stop using it.
 
 See links:
-- https://github.com/python-poetry/poetry/pull/591#issuecomment-504762152
-- https://github.com/python-poetry/poetry/issues/2496
+
+- <https://github.com/python-poetry/poetry/pull/591#issuecomment-504762152>
+- <https://github.com/python-poetry/poetry/issues/2496>

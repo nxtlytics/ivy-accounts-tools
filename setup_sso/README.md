@@ -2,7 +2,9 @@
 
 ## How to use it
 
-```
+<!-- markdownlint-disable MD013 -->
+
+```shell
 $ cd path/to/this/repo
 $ AWS_PROFILE=profile-to-use poetry run python setup_sso/setup_sso.py --help
 usage: setup_sso.py [-h] -a SUB_ACCOUNT_NAME -f SAML_FILE [-s SAML_PROVIDER] [-t IVY_TAG] [-l {CRITICAL,ERROR,WARNING,INFO,DEBUG}]
@@ -22,3 +24,5 @@ optional arguments:
   -l {CRITICAL,ERROR,WARNING,INFO,DEBUG}, --log-level {CRITICAL,ERROR,WARNING,INFO,DEBUG}
                         Set the logging output level
 ```
+
+<!-- markdownlint-enable MD013 -->

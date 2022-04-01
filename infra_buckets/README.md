@@ -2,7 +2,7 @@
 
 ## How to use it
 
-```
+```shell
 $ cd path/to/this/repo
 $ AWS_PROFILE=profile-to-use poetry run python infra_buckets/infra_buckets.py --help
 usage: infra_buckets.py [-h] -c PHASE -p PURPOSE [-t IVY_TAG] [-r REGIONS] [-l {CRITICAL,ERROR,WARNING,INFO,DEBUG}]

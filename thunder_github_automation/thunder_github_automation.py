@@ -14,14 +14,20 @@ class ThunderGithubOIDC:
         "thumbprints": [
             # https://github.blog/changelog/2022-01-13-github-actions-update-on-oidc-based-deployments-to-aws/
             "6938fd4d98bab03faadb97b34396831e3780aea1"
-        ]
+        ],
     }
 
     _DEFAULT_ROLE_NAME = "ThunderGithubAutomation"
     _POLICY_NAME = "ThunderAutomationAccess"
 
-    def __init__(self, repository: str, organization: str, role_name: Optional[str] = None,
-                 session: Optional[boto3.session.Session] = None, endpoint_url: Optional[str] = None):
+    def __init__(
+        self,
+        repository: str,
+        organization: str,
+        role_name: Optional[str] = None,
+        session: Optional[boto3.session.Session] = None,
+        endpoint_url: Optional[str] = None,
+    ):
         self.log = logging.getLogger(self.__class__.__name__)
 
         self.repository = repository
@@ -33,8 +39,12 @@ class ThunderGithubOIDC:
         else:
             self.role_name = role_name
 
-        self.log.info("Setting up AWS oidc provider for Github [%s/%s] with role name [%s]", self.organization,
-                      self.repository, self.role_name)
+        self.log.info(
+            "Setting up AWS oidc provider for Github [%s/%s] with role name [%s]",
+            self.organization,
+            self.repository,
+            self.role_name,
+        )
 
         if session is None:
             self.client: IAMClient = boto3.session.Session().client("iam", endpoint_url=self.endpoint_url)
@@ -43,13 +53,10 @@ class ThunderGithubOIDC:
 
     def _check_provider(self) -> Optional[str]:
         # check if the SSO provider exists, return the arn if so
-        providers = self.client.list_open_id_connect_providers()['OpenIDConnectProviderList']
+        providers = self.client.list_open_id_connect_providers()["OpenIDConnectProviderList"]
         provider_arn = next(
-            filter(
-                lambda provider: self._github_provider["provider"] in provider['Arn'],
-                providers
-            ), {}
-        ).get('Arn')
+            filter(lambda provider: self._github_provider["provider"] in provider["Arn"], providers), {}
+        ).get("Arn")
         if provider_arn:
             self.log.info("Using existing oidc provider [%s]", provider_arn)
         return provider_arn
@@ -63,12 +70,10 @@ class ThunderGithubOIDC:
         try:
             response = self.client.create_open_id_connect_provider(
                 Url=f"https://{self._github_provider['provider']}",
-                ClientIDList=[
-                    self._github_provider["audience"]
-                ],
-                ThumbprintList=self._github_provider["thumbprints"]
+                ClientIDList=[self._github_provider["audience"]],
+                ThumbprintList=self._github_provider["thumbprints"],
             )
-            if provider_arn := response['OpenIDConnectProviderArn']:
+            if provider_arn := response["OpenIDConnectProviderArn"]:
                 self.log.debug("Created provider [%s]", provider_arn)
                 return provider_arn
             else:
@@ -79,12 +84,7 @@ class ThunderGithubOIDC:
 
     def _check_role(self) -> Optional[str]:
         roles = self.client.list_roles()
-        role = next(
-            filter(
-                lambda role: role["RoleName"] == self.role_name,
-                roles.get("Roles", [])
-            ), {}
-        )
+        role = next(filter(lambda role: role["RoleName"] == self.role_name, roles.get("Roles", [])), {})
         role_name, role_arn = role.get("RoleName"), role.get("Arn")
         if role_arn:
             self.log.info("Using existing role [%s] [%s]", role_name, role_arn)
@@ -98,26 +98,26 @@ class ThunderGithubOIDC:
         try:
             response = self.client.create_role(
                 RoleName=self.role_name,
-                AssumeRolePolicyDocument=json.dumps({
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Principal": {
-                                "Federated": provider_arn,
-                            },
-                            "Action": "sts:AssumeRoleWithWebIdentity",
-                            "Condition": {
-                                "StringEquals": {
-                                    "token.actions.githubusercontent.com:aud": "sts.amazonaws.com"
+                AssumeRolePolicyDocument=json.dumps(
+                    {
+                        "Version": "2012-10-17",
+                        "Statement": [
+                            {
+                                "Effect": "Allow",
+                                "Principal": {
+                                    "Federated": provider_arn,
                                 },
-                                "StringLike": {
-                                    "token.actions.githubusercontent.com:sub": f"repo:{self.organization}/{self.repository}:*"
-                                }
+                                "Action": "sts:AssumeRoleWithWebIdentity",
+                                "Condition": {
+                                    "StringEquals": {"token.actions.githubusercontent.com:aud": "sts.amazonaws.com"},
+                                    "StringLike": {
+                                        "token.actions.githubusercontent.com:sub": f"repo:{self.organization}/{self.repository}:*"
+                                    },
+                                },
                             }
-                        }
-                    ]
-                }),
+                        ],
+                    }
+                ),
                 Description="Role for Thunder Github Automation",
             )
             role_name, role_arn = response["Role"]["RoleName"], response["Role"]["Arn"]
@@ -139,16 +139,9 @@ class ThunderGithubOIDC:
                 # This policy is the same as the managed AdministratorAccess policy
                 # this allows us to scope this down later if required,
                 # instead of using a managed policy that cannot be modified.
-                PolicyDocument=json.dumps({
-                    "Version": "2012-10-17",
-                    "Statement": [
-                        {
-                            "Effect": "Allow",
-                            "Action": "*",
-                            "Resource": "*"
-                        }
-                    ]
-                })
+                PolicyDocument=json.dumps(
+                    {"Version": "2012-10-17", "Statement": [{"Effect": "Allow", "Action": "*", "Resource": "*"}]}
+                ),
             )
             self.log.info("Successfully put role contents")
         except Exception as e:
@@ -161,22 +154,24 @@ class ThunderGithubOIDC:
 
 
 @click.command()
-@click.option('--repo', required=True, help='GitHub repository name to grant AWS access')
-@click.option('--org', required=True, help='GitHub organization where the repository exists. This is case sensitive')
-@click.option('--role-name', '-r', help='Optional name of the IAM role to create')
-@click.option('-v', '--verbose', count=True)
+@click.option("--repo", required=True, help="GitHub repository name to grant AWS access")
+@click.option("--org", required=True, help="GitHub organization where the repository exists. This is case sensitive")
+@click.option("--role-name", "-r", help="Optional name of the IAM role to create")
+@click.option("-v", "--verbose", count=True)
 def cli(repo, org, verbose, role_name):
     """
     This script creates a Github OIDC provider in AWS, and creates a role to allow
     Thunder's Github Action to manage the SysEnv.
     """
     # Set up logging - if -vv enable debug logs from boto, single v gives just debug logs from this script
-    logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s",
-                        level=logging.DEBUG if verbose > 1 else logging.INFO)
+    logging.basicConfig(
+        format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s",
+        level=logging.DEBUG if verbose > 1 else logging.INFO,
+    )
     if verbose > 0:
         logging.getLogger(ThunderGithubOIDC.__class__.__name__).setLevel(logging.DEBUG)
     ThunderGithubOIDC(repository=repo, organization=org, role_name=role_name).setup_github_oidc()
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     cli()
