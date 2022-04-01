@@ -8,6 +8,7 @@ import sys
 from botocore import session as se
 from botocore.exceptions import BotoCoreError
 
+
 class VPCCleaner:
     log = logging.getLogger(__name__)
 
@@ -31,29 +32,24 @@ class VPCCleaner:
         else:
             self.session = session
         self.endpoint_url = endpoint_url
-        self.ec2 = self.session.resource('ec2', region_name=region, endpoint_url=self.endpoint_url)
+        self.ec2 = self.session.resource("ec2", region_name=region, endpoint_url=self.endpoint_url)
         self.vpc_resource = self.ec2.Vpc(vpc_id)
         self.dry_run = dry_run
 
     def del_igw(self):
-        """ Detach and delete the internet-gateway """
+        """Detach and delete the internet-gateway"""
         igws = self.vpc_resource.internet_gateways.all()
         if igws:
             for igw in igws:
                 try:
                     self.log.info("Detaching and Removing IGW igw-id: [%s]", igw.id)
-                    igw.detach_from_vpc(
-                        DryRun=self.dry_run,
-                        VpcId=self.vpc_id
-                    )
-                    igw.delete(
-                        DryRun=self.dry_run
-                    )
+                    igw.detach_from_vpc(DryRun=self.dry_run, VpcId=self.vpc_id)
+                    igw.delete(DryRun=self.dry_run)
                 except Exception as e:
                     self.log.exception("Detaching/removing IGW failed with error [%s]", e)
 
     def del_sub(self):
-        """ Delete the subnets """
+        """Delete the subnets"""
         subnets = self.vpc_resource.subnets.all()
         default_subnets = [self.ec2.Subnet(subnet.id) for subnet in subnets if subnet.default_for_az]
 
@@ -61,32 +57,28 @@ class VPCCleaner:
             try:
                 for sub in default_subnets:
                     self.log.info("Removing subnet sub-id: [%s]", sub.id)
-                    sub.delete(
-                        DryRun=self.dry_run
-                    )
+                    sub.delete(DryRun=self.dry_run)
             except Exception as e:
                 self.log.exception("Deleting subnet failed with error [%s]", e)
 
     def del_rtb(self):
-        """ Delete the route-tables """
+        """Delete the route-tables"""
         rtbs = self.vpc_resource.route_tables.all()
         if rtbs:
             try:
                 for rtb in rtbs:
                     assoc_attr = [rtb.associations_attribute for rtb in rtbs]
-                    if [rtb_ass[0]['RouteTableId'] for rtb_ass in assoc_attr if rtb_ass[0]['Main'] == True]:
+                    if [rtb_ass[0]["RouteTableId"] for rtb_ass in assoc_attr if rtb_ass[0]["Main"] == True]:
                         self.log.warning("Deleting route table: " + rtb.id + " is the main route table, continue...")
                         continue
                     self.log.info("Removing rtb-id: [%s]", rtb.id)
                     table = self.ec2.RouteTable(rtb.id)
-                    table.delete(
-                        DryRun=self.dry_run
-                    )
+                    table.delete(DryRun=self.dry_run)
             except Exception as e:
                 self.log.exception("Deleting route table failed with error [%s]", e)
 
     def del_acl(self):
-        """ Delete the network-access-lists """
+        """Delete the network-access-lists"""
         acls = self.vpc_resource.network_acls.all()
 
         if acls:
@@ -96,54 +88,45 @@ class VPCCleaner:
                         self.log.warning("Deleting NACL: " + acl.id + " is the default NACL, continue...")
                         continue
                     self.log.info("Removing acl-id: [%s]", acl.id)
-                    acl.delete(
-                        DryRun=self.dry_run
-                    )
+                    acl.delete(DryRun=self.dry_run)
             except Exception as e:
                 self.log.exception("Deleting NACL failed with error [%s]", e)
 
     def del_sgp(self):
-        """ Delete any security-groups """
+        """Delete any security-groups"""
         sgps = self.vpc_resource.security_groups.all()
         if sgps:
             try:
                 for sg in sgps:
-                    if sg.group_name == 'default':
-                        self.log.warning("Deleting security group: " +sg.id + " is the default security group, continue...")
+                    if sg.group_name == "default":
+                        self.log.warning(
+                            "Deleting security group: " + sg.id + " is the default security group, continue..."
+                        )
                         continue
                     self.log.info("Removing sg-id: [%s]", sg.id)
-                    sg.delete(
-                        DryRun=self.dry_run
-                    )
+                    sg.delete(DryRun=self.dry_run)
             except Exception as e:
                 self.log.exception("Deleting security group failed with error [%s]", e)
 
     def del_vpc(self):
-        """ Delete the VPC """
+        """Delete the VPC"""
         try:
             self.log.info("Removing vpc-id: [%s]", self.vpc_resource.id)
-            self.vpc_resource.delete(
-                DryRun=self.dry_run
-            )
+            self.vpc_resource.delete(DryRun=self.dry_run)
         except Exception as e:
             self.log.exception(e)
-            #self.log.error("Please remove dependencies and delete VPC manually.")
+            # self.log.error("Please remove dependencies and delete VPC manually.")
 
     def clean_all(self):
-        steps = [
-            self.del_igw,
-            self.del_sub,
-            self.del_rtb,
-            self.del_acl,
-            self.del_sgp,
-            self.del_vpc
-        ]
+        steps = [self.del_igw, self.del_sub, self.del_rtb, self.del_acl, self.del_sgp, self.del_vpc]
 
         for step in steps:
             try:
                 self.log.info("Running step [%s] for VPC [%s] in region [%s]", step.__name__, self.vpc_id, self.region)
                 step()
-                self.log.debug("Finished step [%s] for VPC [%s] in region [%s]", step.__name__, self.vpc_id, self.region)
+                self.log.debug(
+                    "Finished step [%s] for VPC [%s] in region [%s]", step.__name__, self.vpc_id, self.region
+                )
             except Exception as e:
                 self.log.exception("Unhandled exception in step [%s]. %s", step.__name__, e)
 
@@ -196,43 +179,45 @@ class AccountCleaner:
             self.session = session
 
     def _get_regions(self):
-        """ Build a region list """
+        """Build a region list"""
         reg_list = []
-        regions = self.session.client('ec2', endpoint_url=self.endpoint_url).describe_regions()
+        regions = self.session.client("ec2", endpoint_url=self.endpoint_url).describe_regions()
         data_str = json.dumps(regions)
         resp = json.loads(data_str)
-        region_str = json.dumps(resp['Regions'])
+        region_str = json.dumps(resp["Regions"])
         region = json.loads(region_str)
         for reg in region:
-            reg_list.append(reg['RegionName'])
+            reg_list.append(reg["RegionName"])
         return reg_list
 
     def _get_default_vpcs(self, region):
         vpc_list = []
-        vpcs = self.session.client('ec2', region_name=region, endpoint_url=self.endpoint_url).describe_vpcs(
+        vpcs = self.session.client("ec2", region_name=region, endpoint_url=self.endpoint_url).describe_vpcs(
             Filters=[
                 {
-                    'Name' : 'isDefault',
-                    'Values' : [
-                        'true',
+                    "Name": "isDefault",
+                    "Values": [
+                        "true",
                     ],
                 },
             ]
         )
         vpcs_str = json.dumps(vpcs)
         resp = json.loads(vpcs_str)
-        data = json.dumps(resp['Vpcs'])
+        data = json.dumps(resp["Vpcs"])
         vpcs = json.loads(data)
 
         for vpc in vpcs:
-            vpc_list.append(vpc['VpcId'])
+            vpc_list.append(vpc["VpcId"])
 
         return vpc_list
 
     def clean_vpc_in_region(self, vpc_id, region):
         self.log.info("Cleaning VPC [%s] in region [%s]", vpc_id, region)
 
-        vpc_cleaner = VPCCleaner(vpc_id=vpc_id, region=region, dry_run=self.dry_run, session=self.session, endpoint_url=self.endpoint_url)
+        vpc_cleaner = VPCCleaner(
+            vpc_id=vpc_id, region=region, dry_run=self.dry_run, session=self.session, endpoint_url=self.endpoint_url
+        )
         vpc_cleaner.clean_all()
 
     def clean_all_vpcs_in_region(self, region):
@@ -247,7 +232,7 @@ class AccountCleaner:
 
 
 @click.command()
-@click.option('--really-delete', is_flag=True, default=False, help="Really delete VPC resources (scary!)")
+@click.option("--really-delete", is_flag=True, default=False, help="Really delete VPC resources (scary!)")
 def app(really_delete):
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
     log = logging.getLogger()  # Gets the root logger

@@ -2,7 +2,9 @@
 
 ## How to use it
 
-```
+<!-- markdownlint-disable MD013 -->
+
+```shell
 $ cd path/to/this/repo
 $ AWS_PROFILE=profile-to-use poetry run python new_sub_account/new_sub_account.py --help
 usage: new_sub_account.py [-h] -a SUB_ACCOUNT_NAME -e EMAIL [-l {CRITICAL,ERROR,WARNING,INFO,DEBUG}]
@@ -18,3 +20,5 @@ optional arguments:
   -l {CRITICAL,ERROR,WARNING,INFO,DEBUG}, --log-level {CRITICAL,ERROR,WARNING,INFO,DEBUG}
                         Set the logging output level
 ```
+
+<!-- markdownlint-enable MD013 -->
