@@ -170,7 +170,7 @@ def test_github_oidc_setup() -> None:
     assert "arn:aws:iam::000000000000:oidc-provider/token.actions.githubusercontent.com" in oidc_providers
     assert "arn:aws:iam::000000000000:role/ThunderGithubAutomation" in roles_arn
     assert setup_gh_oidc._github_provider["audience"] == roles_aud[0]
-    assert f"repo:{org}/{repo}" == roles_repo[0]
+    assert f"repo:{org}/{repo}:*" == roles_repo[0]
 
 
 def test_github_oidc_setup_duplicate() -> None:
