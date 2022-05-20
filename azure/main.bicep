@@ -8,7 +8,7 @@ targetScope = 'subscription'
 @minLength(2)
 @maxLength(5)
 @description('SysEnv Tag Prefix')
-param tagPrefix string = 'ivy'
+param tagPrefix string = 'thunder'
 
 @minLength(2)
 @maxLength(5)
@@ -60,7 +60,7 @@ var tags = {
 	'${tagPrefix}:phase': phase
 	'${tagPrefix}:group': 'main'
 	'${tagPrefix}:team': 'Infrastructure'
-	'${tagPrefix}:createdby': 'ivy-accounts-tools'
+	'${tagPrefix}:createdby': 'cloud-accounts-tools'
 }
 
 // make the resourcegroup

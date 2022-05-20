@@ -17,12 +17,12 @@ log = logging.getLogger()  # Gets the root logger
 log.setLevel(logging.INFO)
 
 endpoint_url = "http://localhost:4566"
-account_name = "ivy-test-sub-account"
-ivy_tag = "ivy"
+account_name = "cloud-test-sub-account"
+tag_prefix = "thunder"
 saml_provider = "gsuite"
 saml_doc = "./tests/test_saml.xml"
 email = "infeng+" + account_name + "@example.com"
-saml_name = ivy_tag + "-" + saml_provider
+saml_name = tag_prefix + "-" + saml_provider
 saml_file = Path(saml_doc)
 phase = "test"
 purpose = "sandbox"
@@ -69,12 +69,12 @@ def test_sub_account_duplicate() -> None:
 
 
 def test_account_setup_parser() -> None:
-    arguments = ["-a", account_name, "-f", saml_doc, "-s", saml_provider, "-t", ivy_tag]
+    arguments = ["-a", account_name, "-f", saml_doc, "-s", saml_provider, "-t", tag_prefix]
     parsed_args = setup_sso_parser(arguments)
     assert parsed_args.sub_account_name == account_name
     assert parsed_args.saml_file == saml_doc
     assert parsed_args.saml_provider == saml_provider
-    assert parsed_args.ivy_tag == ivy_tag
+    assert parsed_args.tag_prefix == tag_prefix
     assert parsed_args.log_level == "INFO"
 
 
@@ -103,7 +103,7 @@ def test_account_setup() -> None:
         if role["RoleName"] == "SSOAdministratorAccess"
     ]
     assert account_name in aliases
-    assert "arn:aws:iam::000000000000:saml-provider/ivy-gsuite" in saml_providers
+    assert "arn:aws:iam::000000000000:saml-provider/thunder-gsuite" in saml_providers
     assert "arn:aws:iam::000000000000:role/SSOAdministratorAccess" in roles_arn
     assert "arn:aws:iam::000000000000:role/SSOViewOnlyAccess" in roles_arn
     assert setup_sso.saml_audiences["aws"] == roles_aud[0]
@@ -242,21 +242,21 @@ def test_vpc_cleaner() -> None:
 
 
 def test_infra_buckets_argparser() -> None:
-    arguments = ["-c", phase, "-p", purpose, "-t", ivy_tag]
+    arguments = ["-c", phase, "-p", purpose, "-t", tag_prefix]
     parsed_args = infra_buckets_parser(arguments)
     assert parsed_args.phase == phase
     assert parsed_args.purpose == purpose
-    assert parsed_args.ivy_tag == ivy_tag
+    assert parsed_args.tag_prefix == tag_prefix
     assert parsed_args.regions is None
     assert parsed_args.log_level == "INFO"
 
 
 def test_infra_buckets_argparser_with_regions() -> None:
-    arguments = ["-c", phase, "-p", purpose, "-t", ivy_tag, "-r", ",".join(s3_regions)]
+    arguments = ["-c", phase, "-p", purpose, "-t", tag_prefix, "-r", ",".join(s3_regions)]
     parsed_args = infra_buckets_parser(arguments)
     assert parsed_args.phase == phase
     assert parsed_args.purpose == purpose
-    assert parsed_args.ivy_tag == ivy_tag
+    assert parsed_args.tag_prefix == tag_prefix
     assert parsed_args.regions == s3_regions
     assert parsed_args.log_level == "INFO"
 
@@ -265,16 +265,16 @@ def test_infra_buckets_creator_on_default_region() -> None:
     # Create s3 infra bucket on default region and account name
     buckets_before = [bucket["Name"] for bucket in commercial_s3_client.list_buckets().get("Buckets", [])]
     tags = {
-        f"{ivy_tag}:sysenv": f"{ivy_tag}-aws-{commercial_region}-{purpose}-{phase}",
-        f"{ivy_tag}:service": "s3",
-        f"{ivy_tag}:role": "bucket",
-        f"{ivy_tag}:group": "main",
-        f"{ivy_tag}:createdby": "ivy-account-tools",
-        f"{ivy_tag}:purpose": purpose,
-        f"{ivy_tag}:phase": phase,
+        f"{tag_prefix}:sysenv": f"{tag_prefix}-aws-{commercial_region}-{purpose}-{phase}",
+        f"{tag_prefix}:service": "s3",
+        f"{tag_prefix}:role": "bucket",
+        f"{tag_prefix}:group": "main",
+        f"{tag_prefix}:createdby": "cloud-account-tools",
+        f"{tag_prefix}:purpose": purpose,
+        f"{tag_prefix}:phase": phase,
     }
     infra_buckets = InfraBuckets(
-        phase=phase, purpose=purpose, ivy_tag=ivy_tag, session=commercial_session, endpoint_url=endpoint_url
+        phase=phase, purpose=purpose, tag_prefix=tag_prefix, session=commercial_session, endpoint_url=endpoint_url
     )
     created_buckets = infra_buckets.create_buckets()
     created_tags = {
@@ -297,7 +297,7 @@ def test_infra_buckets_creator_duplicate() -> None:
     # Try to create duplicate s3 infra bucket on default region and account name
     buckets_before = [bucket["Name"] for bucket in commercial_s3_client.list_buckets().get("Buckets", [])]
     infra_buckets = InfraBuckets(
-        phase=phase, purpose=purpose, ivy_tag=ivy_tag, session=commercial_session, endpoint_url=endpoint_url
+        phase=phase, purpose=purpose, tag_prefix=tag_prefix, session=commercial_session, endpoint_url=endpoint_url
     )
     created_buckets = infra_buckets.create_buckets()
     assert len(buckets_before) == 1
@@ -311,7 +311,7 @@ def test_infra_buckets_creator_on_regions() -> None:
     infra_buckets = InfraBuckets(
         phase=phase,
         purpose=purpose,
-        ivy_tag=ivy_tag,
+        tag_prefix=tag_prefix,
         regions=s3_regions,
         session=commercial_session,
         endpoint_url=endpoint_url,

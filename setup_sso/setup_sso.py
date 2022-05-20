@@ -200,7 +200,7 @@ def setup_sso_parser(arguments) -> argparse.Namespace:
         dest="saml_provider",
         help="Name of the saml provider. Examples: gsuite, azuread",
     )
-    parser.add_argument("-t", "--ivy-tag", type=str, default="ivy", help="Ivy tag also known as namespace")
+    parser.add_argument("-t", "--tag-prefix", type=str, default="thunder", help="Tag prefix also known as namespace")
     parser.add_argument(
         "-l",
         "--log-level",
@@ -217,7 +217,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[args.log_level])
-    saml_name = args.ivy_tag + "-" + args.saml_provider
+    saml_name = args.tag_prefix + "-" + args.saml_provider
     saml_path = Path(args.saml_file)
     setup_sso = AccountSetup(
         alias_name=args.sub_account_name, saml_provider_name=saml_name, saml_provider_file=saml_path

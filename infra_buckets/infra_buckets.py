@@ -24,7 +24,7 @@ class InfraBuckets:
         self,
         phase: str,
         purpose: str,
-        ivy_tag: str,
+        tag_prefix: str,
         regions: Optional[List[str]] = None,
         session: Optional[boto3.session.Session] = None,
         endpoint_url: Optional[str] = None,
@@ -40,12 +40,12 @@ class InfraBuckets:
         self.endpoint_url = endpoint_url
         self.phase = phase
         self.purpose = purpose
-        self.ivy_tag = ivy_tag
+        self.tag_prefix = tag_prefix
         self.client = self.session.client("s3", endpoint_url=self.endpoint_url)
 
     def create_buckets(self) -> List[str]:
         buckets = [
-            f"{self.ivy_tag}-aws-{region}-{self.purpose}-{self.phase}{self.infrastructure_suffix}"
+            f"{self.tag_prefix}-aws-{region}-{self.purpose}-{self.phase}{self.infrastructure_suffix}"
             for region in self.regions
         ]
         self.log.info("Buckets to create are: %s", buckets)
@@ -61,13 +61,13 @@ class InfraBuckets:
             self._set_bucket_tags(
                 bucket_name=bucket,
                 tags={
-                    f"{self.ivy_tag}:sysenv": f"{re.sub(self.infrastructure_suffix, '', bucket)}",
-                    f"{self.ivy_tag}:service": "s3",
-                    f"{self.ivy_tag}:role": "bucket",
-                    f"{self.ivy_tag}:group": "main",
-                    f"{self.ivy_tag}:createdby": "ivy-account-tools",
-                    f"{self.ivy_tag}:purpose": self.purpose,
-                    f"{self.ivy_tag}:phase": self.phase,
+                    f"{self.tag_prefix}:sysenv": f"{re.sub(self.infrastructure_suffix, '', bucket)}",
+                    f"{self.tag_prefix}:service": "s3",
+                    f"{self.tag_prefix}:role": "bucket",
+                    f"{self.tag_prefix}:group": "main",
+                    f"{self.tag_prefix}:createdby": "cloud-account-tools",
+                    f"{self.tag_prefix}:purpose": self.purpose,
+                    f"{self.tag_prefix}:phase": self.phase,
                 },
             )
             for bucket in buckets
@@ -122,7 +122,7 @@ def infra_buckets_parser(arguments) -> argparse.Namespace:
     parser.add_argument(
         "-p", "--purpose", type=str, required=True, help="AWS Sub Account purpose (app, tools, sandbox, ...)"
     )
-    parser.add_argument("-t", "--ivy-tag", type=str, default="ivy", help="Ivy tag also known as namespace")
+    parser.add_argument("-t", "--tag-prefix", type=str, default="thunder", help="Tag prefix also known as namespace")
     parser.add_argument("-r", "--regions", type=str, help="Comma-separated list of AWS regions")
     parser.add_argument(
         "-l",
@@ -145,5 +145,5 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[args.log_level])
-    infra_buckets = InfraBuckets(phase=args.phase, purpose=args.purpose, ivy_tag=args.ivy_tag, regions=args.regions)
+    infra_buckets = InfraBuckets(phase=args.phase, purpose=args.purpose, tag_prefix=args.tag_prefix, regions=args.regions)
     infra_buckets.create_buckets()

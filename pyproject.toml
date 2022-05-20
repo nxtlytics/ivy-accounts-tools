@@ -1,5 +1,5 @@
 [tool.poetry]
-name = "ivy-accounts-tools"
+name = "cloud-accounts-tools"
 version = "0.1.0"
 description = "Multiple scripts used when creating new accounts"
 authors = ["abvikg", "thecubed", "missingcharacter"]

@@ -23,7 +23,7 @@ _LOG_LEVEL_STRINGS = {
 
 def main(
     account_name: str,
-    ivy_tag: str,
+    tag_prefix: str,
     saml_provider: str,
     saml_file: str,
     phase: str,
@@ -48,7 +48,7 @@ def main(
             f"Waiting {sleep_time} seconds after account was created before assuming sub account role, creating alias and removing default VPCs"
         )
         sleep(sleep_time)
-        assume_role = boto3.client("sts").assume_role(RoleArn=sub_account_role_arn, RoleSessionName="IvyAccountTools")
+        assume_role = boto3.client("sts").assume_role(RoleArn=sub_account_role_arn, RoleSessionName="CloudAccountTools")
         sub_account_session = Session(
             aws_access_key_id=assume_role["Credentials"]["AccessKeyId"],
             aws_secret_access_key=assume_role["Credentials"]["SecretAccessKey"],
@@ -59,7 +59,7 @@ def main(
         sub_account_session = None
 
     # Setup AWS alias and roles
-    saml_name = ivy_tag + "-" + saml_provider
+    saml_name = tag_prefix + "-" + saml_provider
     saml_path = Path(saml_file)
     setup_sso = AccountSetup(
         alias_name=account_name, saml_provider_name=saml_name, saml_provider_file=saml_path, session=sub_account_session
@@ -74,7 +74,7 @@ def main(
 
     # Create infra buckets
     infra_buckets = InfraBuckets(
-        phase=phase, purpose=purpose, ivy_tag=ivy_tag, regions=regions, session=sub_account_session
+        phase=phase, purpose=purpose, tag_prefix=tag_prefix, regions=regions, session=sub_account_session
     )
     infra_buckets.create_buckets()
 
@@ -114,7 +114,7 @@ if __name__ == "__main__":
     parser.add_argument(
         "-e", "--e-mail", type=str, default=None, dest="email", help="E-Mail address for the AWS Sub Account"
     )
-    parser.add_argument("-t", "--ivy-tag", type=str, default="ivy", help="Ivy tag also known as namespace")
+    parser.add_argument("-t", "--tag-prefix", type=str, default="thunder", help="Tag prefix also known as namespace")
     parser.add_argument(
         "-l",
         "--log-level",
@@ -130,7 +130,7 @@ if __name__ == "__main__":
 
     main(
         account_name=args.account_name,
-        ivy_tag=args.ivy_tag,
+        tag_prefix=args.tag_prefix,
         saml_provider=args.saml_provider,
         saml_file=args.saml_file,
         log_level=args.log_level,

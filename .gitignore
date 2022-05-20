@@ -140,6 +140,6 @@ cython_debug/
 # IDEs
 .idea/
 
-# ivy-account-tools specific
+# cloud-account-tools specific
 setup_sso/*.xml
 tmp/
