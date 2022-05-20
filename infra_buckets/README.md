@@ -2,6 +2,8 @@
 
 ## How to use it
 
+<!-- markdownlint-disable MD013 -->
+
 ```shell
 $ cd path/to/this/repo
 $ AWS_PROFILE=profile-to-use poetry run python infra_buckets/infra_buckets.py --help

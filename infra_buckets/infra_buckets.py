@@ -145,5 +145,7 @@ if __name__ == "__main__":
     logging.basicConfig(format="%(asctime)s %(levelname)s (%(threadName)s) [%(name)s] %(message)s")
     log = logging.getLogger()  # Gets the root logger
     log.setLevel(_LOG_LEVEL_STRINGS[args.log_level])
-    infra_buckets = InfraBuckets(phase=args.phase, purpose=args.purpose, tag_prefix=args.tag_prefix, regions=args.regions)
+    infra_buckets = InfraBuckets(
+        phase=args.phase, purpose=args.purpose, tag_prefix=args.tag_prefix, regions=args.regions
+    )
     infra_buckets.create_buckets()
